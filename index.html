@@ -4,12 +4,17 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="color-scheme" content="light">
+<meta name="supported-color-schemes" content="light">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <title>PGA Sweep 2026</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Mono:ital,wght@0,400;0,500&family=DM+Sans:wght@300;400;500;700&display=swap" rel="stylesheet">
 <style>
   :root {
+    color-scheme: light only;
     --green: #1a5c2e;
     --green-light: #2d8a47;
     --green-pale: #e8f5ed;
@@ -32,6 +37,7 @@ font-family: ‘DM Sans’, sans-serif;
 background: var(–cream);
 color: var(–text);
 min-height: 100vh;
+-webkit-text-size-adjust: 100%;
 }
 
 /* ── HEADER ── */
@@ -736,6 +742,39 @@ border-radius: 3px;
 padding: 0.1rem 0.3rem;
 margin-left: 0.2rem;
 }
+
+/* ── FORCE LIGHT MODE — override iOS/Android dark mode completely ── */
+@media (prefers-color-scheme: dark) {
+:root {
+–green: #1a5c2e;
+–green-light: #2d8a47;
+–green-pale: #e8f5ed;
+–gold: #c9a84c;
+–gold-light: #f0d080;
+–cream: #faf7f0;
+–dark: #0f1a13;
+–mid: #2a3d2e;
+–text: #1c2e21;
+–muted: #6b8070;
+–border: #d4e4d8;
+–red: #c0392b;
+}
+body { background: #faf7f0 !important; color: #1c2e21 !important; }
+header { background: #0f1a13 !important; }
+.tabs { background: #0f1a13 !important; }
+input, select, textarea {
+background: #faf7f0 !important;
+color: #1c2e21 !important;
+border-color: #d4e4d8 !important;
+}
+.form-card, .settings-section, .golf-lb-wrap,
+table, .modal, .entrant-card {
+background: #fff !important;
+color: #1c2e21 !important;
+}
+.picker-dropdown { background: #fff !important; color: #1c2e21 !important; }
+th, td { color: #1c2e21 !important; background: transparent !important; }
+}
 </style>
 
 </head>
@@ -994,6 +1033,20 @@ margin-left: 0.2rem;
 
 <div class="toast" id="toast"></div>
 
+<!-- Export Modal -->
+
+<div class="modal-overlay" id="export-modal">
+  <div class="modal" style="max-width:600px">
+    <h2>Export Data</h2>
+    <p style="font-size:0.82rem;color:var(--muted);margin-bottom:0.75rem;">Copy this JSON and save it somewhere safe. Use Import to restore it later.</p>
+    <textarea id="export-json-text" readonly style="width:100%;height:200px;font-family:DM Mono,monospace;font-size:0.7rem;padding:0.75rem;border:1.5px solid var(--border);border-radius:8px;background:var(--cream);resize:vertical;outline:none;color:var(--text)"></textarea>
+    <div class="modal-actions">
+      <button class="btn btn-sm" onclick="document.getElementById('export-modal').classList.remove('open')">Close</button>
+      <button class="btn btn-primary" onclick="copyExportJson()">Copy to Clipboard</button>
+    </div>
+  </div>
+</div>
+
 <script>
 // ══════════════════════════════════════════════
 //  STATE
@@ -1118,15 +1171,28 @@ function parseESPN(data) {
   return field;
 }
 
+function normName(s) {
+  return s.toLowerCase()
+    .replace(/[^a-z0-9 ]/g, '')   // strip accents/punctuation
+    .replace(/\s+/g, ' ').trim();
+}
+
 function findGolfer(name) {
   if (!name || !liveField.length) return null;
-  const n = name.trim().toLowerCase();
-  // Exact match first
-  let g = liveField.find(p => p.name.toLowerCase() === n);
-  if (!g) {
-    // Partial match
-    g = liveField.find(p => p.name.toLowerCase().includes(n) || n.includes(p.name.toLowerCase().split(' ').pop()));
-  }
+  const n = normName(name);
+  // 1. Exact normalised match
+  let g = liveField.find(p => normName(p.name) === n);
+  if (g) return g;
+  // 2. Last name match (handles "Lowry, Shane" vs "Shane Lowry")
+  const lastName = n.split(' ').pop();
+  const firstName = n.split(' ')[0];
+  g = liveField.find(p => {
+    const pn = normName(p.name);
+    return pn.endsWith(lastName) && pn.includes(firstName);
+  });
+  if (g) return g;
+  // 3. Last name only (fallback for unique names)
+  g = liveField.find(p => normName(p.name).endsWith(' ' + lastName));
   return g || null;
 }
 
@@ -1699,11 +1765,21 @@ document.addEventListener('click', e => {
 //  IMPORT / EXPORT
 // ══════════════════════════════════════════════
 function exportData() {
-  const blob = new Blob([JSON.stringify({ entrants, settings }, null, 2)], { type: 'application/json' });
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = 'pga-sweep-data.json';
-  a.click();
+  const json = JSON.stringify({ entrants, settings }, null, 2);
+  // Show in a modal textarea — works universally on iOS and desktop
+  document.getElementById('export-json-text').value = json;
+  document.getElementById('export-modal').classList.add('open');
+}
+
+function copyExportJson() {
+  const ta = document.getElementById('export-json-text');
+  ta.select();
+  try {
+    navigator.clipboard.writeText(ta.value).then(() => toast('Copied to clipboard!'));
+  } catch(e) {
+    document.execCommand('copy');
+    toast('Copied!');
+  }
 }
 
 function importData(event) {
