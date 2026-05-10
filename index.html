@@ -1,0 +1,1784 @@
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PGA Sweep 2026</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --green: #1a5c2e;
+    --green-light: #2d8a47;
+    --green-pale: #e8f5ed;
+    --gold: #c9a84c;
+    --gold-light: #f0d080;
+    --cream: #faf7f0;
+    --dark: #0f1a13;
+    --mid: #2a3d2e;
+    --text: #1c2e21;
+    --muted: #6b8070;
+    --border: #d4e4d8;
+    --red: #c0392b;
+    --blue: #1a3a6e;
+  }
+
+- { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+font-family: ‘DM Sans’, sans-serif;
+background: var(–cream);
+color: var(–text);
+min-height: 100vh;
+}
+
+/* ── HEADER ── */
+header {
+background: var(–dark);
+background-image: repeating-linear-gradient(
+45deg,
+transparent,
+transparent 40px,
+rgba(255,255,255,0.015) 40px,
+rgba(255,255,255,0.015) 80px
+);
+padding: 0 2rem;
+border-bottom: 3px solid var(–gold);
+position: sticky;
+top: 0;
+z-index: 100;
+display: flex;
+align-items: center;
+justify-content: space-between;
+gap: 1rem;
+flex-wrap: wrap;
+}
+
+.header-left {
+display: flex;
+align-items: baseline;
+gap: 1rem;
+padding: 1rem 0;
+}
+
+h1 {
+font-family: ‘Bebas Neue’, sans-serif;
+font-size: clamp(2rem, 5vw, 3.2rem);
+color: var(–gold);
+letter-spacing: 3px;
+line-height: 1;
+}
+
+.header-sub {
+font-size: 0.75rem;
+color: var(–gold-light);
+font-family: ‘DM Mono’, monospace;
+opacity: 0.7;
+letter-spacing: 1px;
+text-transform: uppercase;
+}
+
+.live-badge {
+display: flex;
+align-items: center;
+gap: 0.5rem;
+background: rgba(201, 168, 76, 0.15);
+border: 1px solid var(–gold);
+border-radius: 100px;
+padding: 0.35rem 0.9rem;
+font-family: ‘DM Mono’, monospace;
+font-size: 0.7rem;
+color: var(–gold-light);
+letter-spacing: 1px;
+cursor: pointer;
+transition: background 0.2s;
+white-space: nowrap;
+}
+
+.live-badge:hover { background: rgba(201, 168, 76, 0.25); }
+
+.dot {
+width: 7px; height: 7px;
+border-radius: 50%;
+background: #4caf50;
+animation: pulse 2s infinite;
+flex-shrink: 0;
+}
+
+.dot.stale { background: #888; animation: none; }
+
+@keyframes pulse {
+0%, 100% { opacity: 1; transform: scale(1); }
+50% { opacity: 0.5; transform: scale(0.8); }
+}
+
+/* ── TABS ── */
+.tabs {
+display: flex;
+gap: 0;
+background: var(–dark);
+padding: 0 2rem;
+border-bottom: 1px solid rgba(255,255,255,0.08);
+}
+
+.tab {
+font-family: ‘DM Mono’, monospace;
+font-size: 0.72rem;
+letter-spacing: 1.5px;
+text-transform: uppercase;
+color: var(–muted);
+padding: 0.75rem 1.5rem;
+cursor: pointer;
+border-bottom: 2px solid transparent;
+transition: all 0.2s;
+background: none;
+border-top: none;
+border-left: none;
+border-right: none;
+}
+
+.tab.active {
+color: var(–gold);
+border-bottom-color: var(–gold);
+}
+
+.tab:hover:not(.active) { color: #aaa; }
+
+/* ── MAIN ── */
+main { max-width: 1100px; margin: 0 auto; padding: 2rem 1.5rem; }
+
+.panel { display: none; }
+.panel.active { display: block; }
+
+/* ── TOURNAMENT BANNER ── */
+.tournament-banner {
+background: linear-gradient(135deg, var(–green) 0%, var(–mid) 100%);
+border-radius: 12px;
+padding: 1.25rem 1.75rem;
+margin-bottom: 2rem;
+display: flex;
+align-items: center;
+justify-content: space-between;
+gap: 1rem;
+flex-wrap: wrap;
+border: 1px solid rgba(201,168,76,0.3);
+}
+
+.tournament-name {
+font-family: ‘Bebas Neue’, sans-serif;
+font-size: 1.6rem;
+letter-spacing: 2px;
+color: #fff;
+}
+
+.tournament-meta {
+font-family: ‘DM Mono’, monospace;
+font-size: 0.7rem;
+color: rgba(255,255,255,0.6);
+margin-top: 0.2rem;
+letter-spacing: 1px;
+}
+
+.tournament-status-pill {
+background: rgba(201,168,76,0.2);
+border: 1px solid var(–gold);
+color: var(–gold-light);
+font-family: ‘DM Mono’, monospace;
+font-size: 0.7rem;
+letter-spacing: 1px;
+padding: 0.4rem 1rem;
+border-radius: 100px;
+}
+
+/* ── LEADERBOARD TABLE ── */
+.section-title {
+font-family: ‘Bebas Neue’, sans-serif;
+font-size: 1.4rem;
+letter-spacing: 2px;
+color: var(–green);
+margin-bottom: 1rem;
+display: flex;
+align-items: center;
+gap: 0.75rem;
+}
+
+.section-title::after {
+content: ‘’;
+flex: 1;
+height: 1px;
+background: var(–border);
+}
+
+table {
+width: 100%;
+border-collapse: collapse;
+font-size: 0.9rem;
+}
+
+th {
+font-family: ‘DM Mono’, monospace;
+font-size: 0.65rem;
+letter-spacing: 1.5px;
+text-transform: uppercase;
+color: var(–muted);
+padding: 0.6rem 1rem;
+text-align: left;
+border-bottom: 2px solid var(–border);
+white-space: nowrap;
+}
+
+td {
+padding: 0.85rem 1rem;
+border-bottom: 1px solid var(–border);
+vertical-align: middle;
+}
+
+tr:last-child td { border-bottom: none; }
+
+tbody tr {
+transition: background 0.15s;
+}
+
+tbody tr:hover { background: rgba(26,92,46,0.04); }
+
+.rank-cell {
+font-family: ‘Bebas Neue’, sans-serif;
+font-size: 1.5rem;
+color: var(–muted);
+width: 50px;
+text-align: center;
+}
+
+.rank-cell.gold { color: var(–gold); }
+.rank-cell.silver { color: #9e9e9e; }
+.rank-cell.bronze { color: #a0522d; }
+
+.entrant-name {
+font-weight: 700;
+font-size: 1rem;
+}
+
+.golfer-tags {
+display: flex;
+gap: 0.4rem;
+flex-wrap: wrap;
+margin-top: 0.3rem;
+}
+
+.golfer-tag {
+font-family: ‘DM Mono’, monospace;
+font-size: 0.65rem;
+background: var(–green-pale);
+color: var(–green);
+border: 1px solid #b8d9c4;
+border-radius: 4px;
+padding: 0.15rem 0.5rem;
+display: flex;
+align-items: center;
+gap: 0.3rem;
+}
+
+.golfer-tag .pos {
+font-weight: 700;
+color: var(–green-light);
+}
+
+.golfer-tag .pos.cut { color: var(–red); }
+
+.score-cell {
+font-family: ‘Bebas Neue’, sans-serif;
+font-size: 1.8rem;
+text-align: center;
+color: var(–text);
+}
+
+.score-cell.leading { color: var(–green-light); }
+
+.score-detail {
+font-family: ‘DM Mono’, monospace;
+font-size: 0.65rem;
+color: var(–muted);
+text-align: center;
+margin-top: -0.2rem;
+}
+
+.prediction-cell {
+font-family: ‘DM Mono’, monospace;
+font-size: 0.75rem;
+color: var(–muted);
+text-align: right;
+}
+
+/* ── PENDING STATE ── */
+.pending-row td { opacity: 0.55; }
+.pending-score {
+font-family: ‘DM Mono’, monospace;
+font-size: 0.8rem;
+color: var(–muted);
+text-align: center;
+}
+
+/* ── EMPTY STATE ── */
+.empty-state {
+text-align: center;
+padding: 4rem 2rem;
+color: var(–muted);
+}
+
+.empty-state .big-icon {
+font-size: 3rem;
+margin-bottom: 1rem;
+opacity: 0.4;
+}
+
+.empty-state p { font-size: 0.95rem; }
+.empty-state strong { color: var(–text); }
+
+/* ── GOLF LEADERBOARD ── */
+.golf-lb-wrap {
+background: #fff;
+border: 1px solid var(–border);
+border-radius: 12px;
+overflow: hidden;
+margin-bottom: 2rem;
+}
+
+.golf-lb-head {
+background: var(–green);
+padding: 0.75rem 1.25rem;
+display: flex;
+align-items: center;
+justify-content: space-between;
+}
+
+.golf-lb-head span {
+font-family: ‘DM Mono’, monospace;
+font-size: 0.7rem;
+color: rgba(255,255,255,0.7);
+letter-spacing: 1px;
+}
+
+.golf-lb-head strong {
+font-family: ‘Bebas Neue’, sans-serif;
+font-size: 1.1rem;
+letter-spacing: 2px;
+color: #fff;
+}
+
+#golf-leaderboard-table th { font-size: 0.6rem; padding: 0.5rem 0.75rem; }
+#golf-leaderboard-table td { padding: 0.6rem 0.75rem; font-size: 0.85rem; }
+
+.golf-pos { font-family: ‘DM Mono’, monospace; font-weight: 500; color: var(–muted); width: 40px; }
+.golf-name { font-weight: 600; }
+.golf-score { font-family: ‘DM Mono’, monospace; font-weight: 500; }
+.golf-score.under { color: var(–red); }
+.golf-score.even { color: var(–muted); }
+.golf-score.over { color: #555; }
+.golf-thru { font-family: ‘DM Mono’, monospace; font-size: 0.75rem; color: var(–muted); }
+.golf-r1,.golf-r2,.golf-r3,.golf-r4 { font-family: ‘DM Mono’, monospace; font-size: 0.78rem; color: var(–muted); }
+
+.highlight-row { background: rgba(201,168,76,0.08) !important; }
+.highlight-row td:first-child { border-left: 3px solid var(–gold); }
+
+/* ── FORM ── */
+.form-card {
+background: #fff;
+border: 1px solid var(–border);
+border-radius: 12px;
+padding: 2rem;
+max-width: 560px;
+}
+
+.form-row {
+margin-bottom: 1.25rem;
+}
+
+label {
+display: block;
+font-family: ‘DM Mono’, monospace;
+font-size: 0.7rem;
+letter-spacing: 1px;
+text-transform: uppercase;
+color: var(–muted);
+margin-bottom: 0.4rem;
+}
+
+input[type=text], input[type=number], select {
+width: 100%;
+padding: 0.65rem 0.85rem;
+border: 1.5px solid var(–border);
+border-radius: 7px;
+font-family: ‘DM Sans’, sans-serif;
+font-size: 0.9rem;
+color: var(–text);
+background: var(–cream);
+transition: border-color 0.2s;
+outline: none;
+}
+
+input:focus, select:focus { border-color: var(–green-light); }
+
+.golfer-inputs { display: flex; flex-direction: column; gap: 0.6rem; }
+
+.golfer-input-row {
+display: flex;
+align-items: center;
+gap: 0.5rem;
+}
+
+.golfer-num {
+font-family: ‘Bebas Neue’, sans-serif;
+font-size: 1.2rem;
+color: var(–green);
+width: 24px;
+text-align: center;
+flex-shrink: 0;
+}
+
+.golfer-input-row input { flex: 1; }
+
+.btn {
+font-family: ‘DM Mono’, monospace;
+font-size: 0.8rem;
+letter-spacing: 1px;
+text-transform: uppercase;
+padding: 0.75rem 1.5rem;
+border-radius: 7px;
+cursor: pointer;
+border: none;
+transition: all 0.2s;
+}
+
+.btn-primary {
+background: var(–green);
+color: #fff;
+}
+
+.btn-primary:hover { background: var(–green-light); }
+
+.btn-danger {
+background: transparent;
+border: 1px solid #ddd;
+color: var(–red);
+padding: 0.3rem 0.7rem;
+font-size: 0.65rem;
+}
+
+.btn-danger:hover { background: #fff0f0; border-color: var(–red); }
+
+.btn-sm {
+background: transparent;
+border: 1px solid var(–border);
+color: var(–muted);
+padding: 0.3rem 0.7rem;
+font-size: 0.65rem;
+}
+
+.btn-sm:hover { border-color: var(–green); color: var(–green); }
+
+.form-hint {
+font-size: 0.75rem;
+color: var(–muted);
+margin-top: 0.35rem;
+}
+
+/* ── ENTRANT MANAGEMENT ── */
+.entrant-list { display: flex; flex-direction: column; gap: 0.75rem; margin-top: 2rem; }
+
+.entrant-card {
+background: #fff;
+border: 1px solid var(–border);
+border-radius: 10px;
+padding: 1rem 1.25rem;
+display: flex;
+align-items: center;
+gap: 1rem;
+flex-wrap: wrap;
+}
+
+.entrant-card-name { font-weight: 700; flex: 1; min-width: 120px; }
+
+.entrant-card-golfers {
+display: flex;
+gap: 0.4rem;
+flex-wrap: wrap;
+flex: 2;
+}
+
+.entrant-card-actions { display: flex; gap: 0.4rem; flex-shrink: 0; }
+
+/* ── SETTINGS / ADMIN ── */
+.settings-grid {
+display: grid;
+grid-template-columns: 1fr 1fr;
+gap: 1.5rem;
+margin-bottom: 2rem;
+}
+
+@media (max-width: 600px) {
+.settings-grid { grid-template-columns: 1fr; }
+.tabs { padding: 0 1rem; }
+.tab { padding: 0.75rem 0.9rem; font-size: 0.65rem; }
+main { padding: 1.25rem 1rem; }
+header { padding: 0 1rem; }
+th, td { padding: 0.6rem 0.5rem; }
+}
+
+.settings-section {
+background: #fff;
+border: 1px solid var(–border);
+border-radius: 12px;
+padding: 1.5rem;
+}
+
+.settings-section h3 {
+font-family: ‘Bebas Neue’, sans-serif;
+font-size: 1.1rem;
+letter-spacing: 1.5px;
+color: var(–green);
+margin-bottom: 1rem;
+}
+
+.info-box {
+background: var(–green-pale);
+border: 1px solid #b8d9c4;
+border-radius: 8px;
+padding: 1rem;
+font-size: 0.82rem;
+color: var(–green);
+line-height: 1.6;
+margin-bottom: 1rem;
+}
+
+.info-box strong { font-weight: 700; }
+
+.warning-box {
+background: #fff8e6;
+border: 1px solid #e6c84c;
+border-radius: 8px;
+padding: 0.9rem 1rem;
+font-size: 0.8rem;
+color: #7a5c00;
+margin-top: 1rem;
+line-height: 1.5;
+}
+
+/* ── LAST UPDATED ── */
+#last-updated {
+font-family: ‘DM Mono’, monospace;
+font-size: 0.65rem;
+color: var(–muted);
+text-align: center;
+margin-top: 2rem;
+padding-top: 1rem;
+border-top: 1px solid var(–border);
+}
+
+/* ── MODAL ── */
+.modal-overlay {
+position: fixed; inset: 0;
+background: rgba(0,0,0,0.5);
+display: flex; align-items: center; justify-content: center;
+z-index: 200;
+padding: 1rem;
+opacity: 0;
+pointer-events: none;
+transition: opacity 0.2s;
+}
+
+.modal-overlay.open { opacity: 1; pointer-events: all; }
+
+.modal {
+background: #fff;
+border-radius: 14px;
+padding: 2rem;
+max-width: 500px;
+width: 100%;
+transform: translateY(20px);
+transition: transform 0.2s;
+}
+
+.modal-overlay.open .modal { transform: translateY(0); }
+
+.modal h2 {
+font-family: ‘Bebas Neue’, sans-serif;
+font-size: 1.6rem;
+letter-spacing: 2px;
+color: var(–green);
+margin-bottom: 1.25rem;
+}
+
+.modal-actions {
+display: flex; gap: 0.75rem; justify-content: flex-end;
+margin-top: 1.5rem;
+}
+
+.spinner {
+display: inline-block;
+width: 12px; height: 12px;
+border: 2px solid rgba(255,255,255,0.3);
+border-top-color: #fff;
+border-radius: 50%;
+animation: spin 0.7s linear infinite;
+vertical-align: middle;
+margin-right: 6px;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.toast {
+position: fixed;
+bottom: 1.5rem;
+right: 1.5rem;
+background: var(–dark);
+color: #fff;
+font-family: ‘DM Mono’, monospace;
+font-size: 0.75rem;
+padding: 0.75rem 1.25rem;
+border-radius: 8px;
+border-left: 3px solid var(–gold);
+z-index: 300;
+transform: translateY(80px);
+opacity: 0;
+transition: all 0.3s;
+letter-spacing: 0.5px;
+}
+
+.toast.show { transform: translateY(0); opacity: 1; }
+
+/* ── PLAYER PICKER ── */
+.picker-wrap { position: relative; }
+
+.picker-search {
+width: 100%;
+cursor: pointer;
+}
+
+.picker-dropdown {
+position: absolute;
+top: calc(100% + 2px); left: 0; right: 0;
+background: #fff;
+border: 1.5px solid var(–green-light);
+border-radius: 8px;
+max-height: 240px;
+overflow-y: auto;
+z-index: 200;
+display: none;
+box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+}
+
+.picker-dropdown.open { display: block; }
+
+.picker-item {
+padding: 0.55rem 0.9rem;
+cursor: pointer;
+font-size: 0.88rem;
+border-bottom: 1px solid var(–border);
+display: flex;
+align-items: center;
+justify-content: space-between;
+transition: background 0.1s;
+gap: 0.5rem;
+}
+
+.picker-item:last-child { border-bottom: none; }
+
+.picker-item:hover, .picker-item.kbd-focus {
+background: var(–green-pale);
+color: var(–green);
+}
+
+.picker-item .pi-country {
+font-family: ‘DM Mono’, monospace;
+font-size: 0.62rem;
+color: var(–muted);
+flex-shrink: 0;
+text-align: right;
+}
+
+.picker-empty {
+padding: 0.75rem 0.9rem;
+color: var(–muted);
+font-size: 0.82rem;
+font-family: ‘DM Mono’, monospace;
+text-align: center;
+}
+
+.tiebreak-label {
+font-family: ‘DM Mono’, monospace;
+font-size: 0.6rem;
+letter-spacing: 0.5px;
+color: var(–muted);
+opacity: 0.7;
+display: block;
+}
+
+.cut-tag {
+font-family: ‘DM Mono’, monospace;
+font-size: 0.58rem;
+background: #fde8e8;
+color: var(–red);
+border: 1px solid #f5b8b8;
+border-radius: 3px;
+padding: 0.1rem 0.3rem;
+margin-left: 0.2rem;
+}
+
+.wd-tag {
+font-family: ‘DM Mono’, monospace;
+font-size: 0.58rem;
+background: #eee;
+color: #666;
+border: 1px solid #ccc;
+border-radius: 3px;
+padding: 0.1rem 0.3rem;
+margin-left: 0.2rem;
+}
+</style>
+
+</head>
+<body>
+
+<header>
+  <div class="header-left">
+    <h1>PGA Sweep</h1>
+    <span class="header-sub">2026 Championship</span>
+  </div>
+  <div class="live-badge" onclick="refreshScores(true)">
+    <span class="dot" id="live-dot"></span>
+    <span id="live-status">LIVE SCORES</span>
+  </div>
+</header>
+
+<div class="tabs">
+  <button class="tab active" onclick="switchTab('leaderboard')">Leaderboard</button>
+  <button class="tab" onclick="switchTab('golf-scores')">Tournament Scores</button>
+  <button class="tab" onclick="switchTab('admin')">Manage Entries</button>
+  <button class="tab" onclick="switchTab('settings')">Settings</button>
+</div>
+
+<main>
+
+  <!-- ── LEADERBOARD PANEL ── -->
+
+  <div id="panel-leaderboard" class="panel active">
+    <div class="tournament-banner" id="tournament-banner">
+      <div>
+        <div class="tournament-name" id="banner-name">PGA Championship 2026</div>
+        <div class="tournament-meta" id="banner-meta">Aronimink Golf Club · May 14–17</div>
+      </div>
+      <div class="tournament-status-pill" id="banner-status">Loading…</div>
+    </div>
+
+```
+<div class="section-title">Sweep Standings</div>
+<div style="background:#fff; border:1px solid var(--border); border-radius:12px; overflow:hidden;">
+  <table id="sweep-table">
+    <thead>
+      <tr>
+        <th style="text-align:center">Pos</th>
+        <th>Entrant</th>
+        <th style="text-align:center">Score</th>
+        <th>Best Golfer</th>
+        <th style="text-align:right">Prediction</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody id="sweep-tbody">
+      <tr><td colspan="6"><div class="empty-state"><div class="big-icon">⛳</div><p>No entries yet.<br><strong>Add some via Manage Entries.</strong></p></div></td></tr>
+    </tbody>
+  </table>
+</div>
+
+<div id="last-updated">Scores not yet loaded</div>
+```
+
+  </div>
+
+  <!-- ── TOURNAMENT SCORES PANEL ── -->
+
+  <div id="panel-golf-scores" class="panel">
+    <div class="section-title">Official Leaderboard</div>
+    <div class="golf-lb-wrap">
+      <div class="golf-lb-head">
+        <strong id="glb-title">PGA Championship 2026</strong>
+        <span id="glb-meta">Loading live data…</span>
+      </div>
+      <div style="overflow-x:auto;">
+        <table id="golf-leaderboard-table">
+          <thead>
+            <tr>
+              <th>POS</th>
+              <th>PLAYER</th>
+              <th>TO PAR</th>
+              <th>THRU</th>
+              <th>R1</th>
+              <th>R2</th>
+              <th>R3</th>
+              <th>R4</th>
+              <th>TOTAL</th>
+            </tr>
+          </thead>
+          <tbody id="golf-lb-tbody">
+            <tr><td colspan="9" style="text-align:center; padding:2rem; color:var(--muted); font-family:DM Mono,monospace; font-size:0.8rem;">Fetching tournament data…</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── ADMIN PANEL ── -->
+
+  <div id="panel-admin" class="panel">
+    <div class="section-title">Manage Entries</div>
+
+```
+<div class="form-card">
+  <div class="form-row">
+    <label>Entrant Name</label>
+    <input type="text" id="f-name" placeholder="e.g. John Smith">
+  </div>
+
+  <div class="form-row">
+    <label>3 Golfer Picks</label>
+    <div class="golfer-inputs">
+      <div class="golfer-input-row">
+        <span class="golfer-num">1</span>
+        <div class="picker-wrap" style="flex:1">
+          <input type="text" class="golfer-input picker-search" id="f-g1" placeholder="Search player…" autocomplete="off" oninput="pickerFilter(this,'pd-0')" onfocus="pickerOpen('pd-0')" onkeydown="pickerKey(event,'pd-0',this)">
+          <div class="picker-dropdown" id="pd-0"></div>
+        </div>
+      </div>
+      <div class="golfer-input-row">
+        <span class="golfer-num">2</span>
+        <div class="picker-wrap" style="flex:1">
+          <input type="text" class="golfer-input picker-search" id="f-g2" placeholder="Search player…" autocomplete="off" oninput="pickerFilter(this,'pd-1')" onfocus="pickerOpen('pd-1')" onkeydown="pickerKey(event,'pd-1',this)">
+          <div class="picker-dropdown" id="pd-1"></div>
+        </div>
+      </div>
+      <div class="golfer-input-row">
+        <span class="golfer-num">3</span>
+        <div class="picker-wrap" style="flex:1">
+          <input type="text" class="golfer-input picker-search" id="f-g3" placeholder="Search player…" autocomplete="off" oninput="pickerFilter(this,'pd-2')" onfocus="pickerOpen('pd-2')" onkeydown="pickerKey(event,'pd-2',this)">
+          <div class="picker-dropdown" id="pd-2"></div>
+        </div>
+      </div>
+    </div>
+    <div class="form-hint">Type to search the confirmed 156-player field.</div>
+  </div>
+
+  <div class="form-row">
+    <label>Winning Score Prediction (to par)</label>
+    <input type="number" id="f-pred" placeholder="e.g. -15" min="-40" max="20">
+    <div class="form-hint">Used as final tiebreaker. Enter as relative to par (e.g. -15).</div>
+  </div>
+
+  <button class="btn btn-primary" onclick="addEntrant()">Add Entry</button>
+</div>
+
+<div id="entrant-list" class="entrant-list"></div>
+```
+
+  </div>
+
+  <!-- ── SETTINGS PANEL ── -->
+
+  <div id="panel-settings" class="panel">
+    <div class="section-title">Settings</div>
+    <div class="settings-grid">
+      <div class="settings-section">
+        <h3>Tournament</h3>
+        <div class="form-row">
+          <label>Tournament Name</label>
+          <input type="text" id="s-name" value="PGA Championship 2026">
+        </div>
+        <div class="form-row">
+          <label>Venue / Dates</label>
+          <input type="text" id="s-venue" value="Aronimink Golf Club · May 14–17">
+        </div>
+        <div class="form-row">
+          <label>ESPN Tournament ID</label>
+          <input type="text" id="s-eid" value="401580340" placeholder="ESPN event ID">
+          <div class="form-hint">From ESPN scores URL. Used for live data.</div>
+        </div>
+        <button class="btn btn-primary" onclick="saveSettings()">Save Settings</button>
+      </div>
+
+```
+  <div class="settings-section">
+    <h3>Rules Summary</h3>
+    <div class="info-box">
+      <strong>Scoring:</strong> Finishing position = score. <strong>Lowest total wins.</strong><br><br>
+      <strong>Tiebreaker order:</strong><br>
+      1️⃣ Highest-placed single golfer<br>
+      2️⃣ Lowest individual round score<br>
+      3️⃣ Closest winning score prediction
+    </div>
+    <div class="form-row">
+      <label>CUT penalty (finishing position for missed cut)</label>
+      <input type="number" id="s-cut" value="80" min="1" max="200">
+      <div class="form-hint">Players who miss the cut get this position (default: 80).</div>
+    </div>
+    <div class="form-row">
+      <label>WD / DQ penalty</label>
+      <input type="number" id="s-wd" value="100" min="1" max="200">
+    </div>
+    <button class="btn btn-primary" onclick="saveSettings()">Save</button>
+  </div>
+</div>
+
+<div class="settings-section" style="max-width:560px;">
+  <h3>Data Management</h3>
+  <div style="display:flex; gap:0.75rem; flex-wrap:wrap; margin-bottom:1rem;">
+    <button class="btn btn-primary" onclick="exportData()">Export JSON</button>
+    <button class="btn btn-sm" onclick="document.getElementById('import-file').click()">Import JSON</button>
+    <input type="file" id="import-file" accept=".json" style="display:none" onchange="importData(event)">
+    <button class="btn btn-danger" onclick="clearAllData()">Clear All Data</button>
+  </div>
+  <div class="warning-box">
+    ⚠️ All data is stored in your browser's localStorage. Export regularly to back up entries. To share across devices, use Import/Export.
+  </div>
+</div>
+
+<div class="settings-section" style="max-width:560px; margin-top:1.5rem;">
+  <h3>GitHub Pages Deployment</h3>
+  <div class="info-box" style="font-size:0.78rem;">
+    <strong>To publish:</strong><br>
+    1. Create a GitHub repo (e.g. <code>pga-sweep-2026</code>)<br>
+    2. Upload this <code>index.html</code> file<br>
+    3. Go to Settings → Pages → Deploy from branch: <strong>main / root</strong><br>
+    4. Your app will be live at <code>https://yourusername.github.io/pga-sweep-2026</code><br><br>
+    <strong>Note:</strong> Each person who visits shares the same URL but their localStorage is separate. Share your exported JSON with participants to sync, or use the admin's copy as the master.
+  </div>
+</div>
+```
+
+  </div>
+
+</main>
+
+<!-- Modal for editing -->
+
+<div class="modal-overlay" id="edit-modal">
+  <div class="modal">
+    <h2>Edit Entry</h2>
+    <input type="hidden" id="edit-idx">
+    <div class="form-row">
+      <label>Entrant Name</label>
+      <input type="text" id="edit-name">
+    </div>
+    <div class="form-row">
+      <label>Golfer 1</label>
+      <div class="picker-wrap">
+        <input type="text" class="picker-search" id="edit-g1" placeholder="Search player…" autocomplete="off" oninput="pickerFilter(this,'pd-e1')" onfocus="pickerOpen('pd-e1')" onkeydown="pickerKey(event,'pd-e1',this)">
+        <div class="picker-dropdown" id="pd-e1"></div>
+      </div>
+    </div>
+    <div class="form-row">
+      <label>Golfer 2</label>
+      <div class="picker-wrap">
+        <input type="text" class="picker-search" id="edit-g2" placeholder="Search player…" autocomplete="off" oninput="pickerFilter(this,'pd-e2')" onfocus="pickerOpen('pd-e2')" onkeydown="pickerKey(event,'pd-e2',this)">
+        <div class="picker-dropdown" id="pd-e2"></div>
+      </div>
+    </div>
+    <div class="form-row">
+      <label>Golfer 3</label>
+      <div class="picker-wrap">
+        <input type="text" class="picker-search" id="edit-g3" placeholder="Search player…" autocomplete="off" oninput="pickerFilter(this,'pd-e3')" onfocus="pickerOpen('pd-e3')" onkeydown="pickerKey(event,'pd-e3',this)">
+        <div class="picker-dropdown" id="pd-e3"></div>
+      </div>
+    </div>
+    <div class="form-row">
+      <label>Winning Score Prediction</label>
+      <input type="number" id="edit-pred" min="-40" max="20">
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-sm" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="saveEdit()">Save Changes</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ══════════════════════════════════════════════
+//  STATE
+// ══════════════════════════════════════════════
+let entrants = [];
+let liveField = []; // [{name, pos, posNum, score, thru, r1,r2,r3,r4, cut, wd}]
+let settings = {
+  tournamentName: 'PGA Championship 2026',
+  venue: 'Aronimink Golf Club · May 14–17',
+  espnEventId: '401580340',
+  cutPenalty: 80,
+  wdPenalty: 100
+};
+let lastFetch = null;
+let autoRefreshInterval = null;
+
+// ══════════════════════════════════════════════
+//  STORAGE
+// ══════════════════════════════════════════════
+function save() {
+  localStorage.setItem('pgasweep_entrants', JSON.stringify(entrants));
+  localStorage.setItem('pgasweep_settings', JSON.stringify(settings));
+}
+
+function load() {
+  try {
+    const e = localStorage.getItem('pgasweep_entrants');
+    if (e) entrants = JSON.parse(e);
+    const s = localStorage.getItem('pgasweep_settings');
+    if (s) settings = { ...settings, ...JSON.parse(s) };
+  } catch(ex) {}
+  applySettings();
+}
+
+function applySettings() {
+  document.getElementById('s-name').value = settings.tournamentName;
+  document.getElementById('s-venue').value = settings.venue;
+  document.getElementById('s-eid').value = settings.espnEventId;
+  document.getElementById('s-cut').value = settings.cutPenalty;
+  document.getElementById('s-wd').value = settings.wdPenalty;
+  document.getElementById('banner-name').textContent = settings.tournamentName;
+  document.getElementById('banner-meta').textContent = settings.venue;
+  document.getElementById('glb-title').textContent = settings.tournamentName;
+}
+
+function saveSettings() {
+  settings.tournamentName = document.getElementById('s-name').value.trim();
+  settings.venue = document.getElementById('s-venue').value.trim();
+  settings.espnEventId = document.getElementById('s-eid').value.trim();
+  settings.cutPenalty = parseInt(document.getElementById('s-cut').value) || 80;
+  settings.wdPenalty = parseInt(document.getElementById('s-wd').value) || 100;
+  save();
+  applySettings();
+  toast('Settings saved');
+  refreshScores(true);
+}
+
+// ══════════════════════════════════════════════
+//  TABS
+// ══════════════════════════════════════════════
+function switchTab(name) {
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('panel-' + name).classList.add('active');
+  event.target.classList.add('active');
+  if (name === 'leaderboard' || name === 'golf-scores') renderAll();
+}
+
+// ══════════════════════════════════════════════
+//  LIVE SCORES — ESPN public API
+// ══════════════════════════════════════════════
+async function fetchLiveScores() {
+  const id = settings.espnEventId || '401580340';
+  const url = `https://site.web.api.espn.com/apis/site/v2/sports/golf/pga/scoreboard?event=${id}&lang=en&region=gb`;
+  try {
+    const res = await fetch(url);
+    if (!res.ok) throw new Error('ESPN ' + res.status);
+    const data = await res.json();
+    return parseESPN(data);
+  } catch(e) {
+    console.warn('ESPN fetch failed:', e);
+    return null;
+  }
+}
+
+function parseESPN(data) {
+  const field = [];
+  try {
+    const event = data.events?.[0];
+    if (!event) return field;
+    const comp = event.competitions?.[0];
+    if (!comp) return field;
+    const competitors = comp.competitors || [];
+    
+    for (const c of competitors) {
+      const name = c.athlete?.displayName || c.athlete?.fullName || '?';
+      const status = c.status?.type?.name || '';
+      const cut = status === 'CUT' || (c.status?.thru === 'CUT');
+      const wd = status === 'WD' || status === 'DQ';
+      
+      // Position
+      let posStr = c.status?.position?.displayName || c.status?.displayValue || '';
+      let posNum;
+      if (cut) {
+        posNum = settings.cutPenalty;
+        posStr = 'CUT';
+      } else if (wd) {
+        posNum = settings.wdPenalty;
+        posStr = 'WD';
+      } else {
+        // Extract number from T3 → 3, 1 → 1
+        const m = posStr.replace(/^T/, '').match(/\d+/);
+        posNum = m ? parseInt(m[0]) : 999;
+      }
+
+      const score = c.score || '';
+      const thru = c.status?.thru || '';
+
+      // Round scores from linescores
+      const ls = c.linescores || [];
+      const rounds = ls.map(l => l.displayValue || l.value || '');
+      const r1 = rounds[0] || '', r2 = rounds[1] || '', r3 = rounds[2] || '', r4 = rounds[3] || '';
+
+      // Best (lowest) round score for tiebreak
+      const roundNums = [r1,r2,r3,r4].map(r => parseInt(r)).filter(n => !isNaN(n));
+      const bestRound = roundNums.length ? Math.min(...roundNums) : null;
+
+      field.push({ name, pos: posStr, posNum, score, thru, r1, r2, r3, r4, cut, wd, bestRound });
+    }
+    field.sort((a,b) => a.posNum - b.posNum);
+  } catch(e) {
+    console.warn('ESPN parse error:', e);
+  }
+  return field;
+}
+
+function findGolfer(name) {
+  if (!name || !liveField.length) return null;
+  const n = name.trim().toLowerCase();
+  // Exact match first
+  let g = liveField.find(p => p.name.toLowerCase() === n);
+  if (!g) {
+    // Partial match
+    g = liveField.find(p => p.name.toLowerCase().includes(n) || n.includes(p.name.toLowerCase().split(' ').pop()));
+  }
+  return g || null;
+}
+
+async function refreshScores(manual = false) {
+  if (manual) {
+    document.getElementById('live-status').textContent = 'FETCHING…';
+    document.getElementById('live-dot').className = 'dot stale';
+  }
+  const field = await fetchLiveScores();
+  if (field && field.length > 0) {
+    liveField = field;
+    lastFetch = new Date();
+    document.getElementById('live-dot').className = 'dot';
+    document.getElementById('live-status').textContent = 'LIVE · ' + lastFetch.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
+    document.getElementById('last-updated').textContent = 'Last updated: ' + lastFetch.toLocaleString();
+    document.getElementById('banner-status').textContent = 'Live Data';
+    document.getElementById('glb-meta').textContent = 'Updated ' + lastFetch.toLocaleTimeString();
+  } else {
+    document.getElementById('live-dot').className = 'dot stale';
+    document.getElementById('live-status').textContent = 'NO LIVE DATA';
+    document.getElementById('banner-status').textContent = 'Pre-Tournament';
+    document.getElementById('glb-meta').textContent = 'No live data available yet';
+    if (manual) toast('No live data yet — tournament may not have started');
+  }
+  renderAll();
+}
+
+// ══════════════════════════════════════════════
+//  SCORING & TIEBREAKERS
+// ══════════════════════════════════════════════
+function calcEntrantScore(entrant) {
+  if (!liveField.length) return null;
+
+  const golfers = [entrant.g1, entrant.g2, entrant.g3]
+    .map(name => ({ name, data: findGolfer(name) }));
+
+  let total = 0;
+  let allFound = true;
+  const positions = [];
+  const bestRounds = [];
+
+  for (const g of golfers) {
+    if (g.data) {
+      total += g.data.posNum;
+      positions.push(g.data.posNum);
+      if (g.data.bestRound !== null) bestRounds.push(g.data.bestRound);
+    } else {
+      // Golfer not found in field yet — treat as not started
+      allFound = false;
+      total += 999;
+      positions.push(999);
+    }
+  }
+
+  const bestPos = Math.min(...positions);
+  const bestRound = bestRounds.length ? Math.min(...bestRounds) : 999;
+
+  return { total, bestPos, bestRound, golfers, allFound };
+}
+
+function rankEntrants() {
+  const scored = entrants.map((e, i) => ({
+    idx: i,
+    entrant: e,
+    result: calcEntrantScore(e)
+  }));
+
+  // Sort: total asc, then bestPos asc, then bestRound asc, then |pred - winner| asc
+  const winnerScore = liveField.length ? parseInt(liveField[0]?.score) || 0 : 0;
+
+  scored.sort((a, b) => {
+    const ta = a.result ? a.result.total : 9999;
+    const tb = b.result ? b.result.total : 9999;
+    if (ta !== tb) return ta - tb;
+    const ba = a.result ? a.result.bestPos : 9999;
+    const bb = b.result ? b.result.bestPos : 9999;
+    if (ba !== bb) return ba - bb;
+    const ra = a.result ? a.result.bestRound : 999;
+    const rb = b.result ? b.result.bestRound : 999;
+    if (ra !== rb) return ra - rb;
+    const pa = Math.abs((a.entrant.pred || 0) - winnerScore);
+    const pb = Math.abs((b.entrant.pred || 0) - winnerScore);
+    return pa - pb;
+  });
+
+  return scored;
+}
+
+// ══════════════════════════════════════════════
+//  RENDER
+// ══════════════════════════════════════════════
+function renderAll() {
+  renderSweepTable();
+  renderGolfLeaderboard();
+  renderAdminList();
+}
+
+function renderSweepTable() {
+  const tbody = document.getElementById('sweep-tbody');
+  if (!entrants.length) {
+    tbody.innerHTML = '<tr><td colspan="6"><div class="empty-state"><div class="big-icon">⛳</div><p>No entries yet.<br><strong>Add some via Manage Entries.</strong></p></div></td></tr>';
+    return;
+  }
+
+  const ranked = rankEntrants();
+  let html = '';
+
+  ranked.forEach((item, rank) => {
+    const e = item.entrant;
+    const r = item.result;
+    const pos = rank + 1;
+    const rankClass = pos === 1 ? 'gold' : pos === 2 ? 'silver' : pos === 3 ? 'bronze' : '';
+    const hasLive = liveField.length > 0;
+
+    let golferTagsHtml = '';
+    if (r && r.golfers) {
+      golferTagsHtml = r.golfers.map(g => {
+        const d = g.data;
+        if (!d) return `<span class="golfer-tag"><span>${g.name}</span><span class="pos" style="color:var(--muted)">—</span></span>`;
+        const posDisplay = d.cut ? `<span class="pos cut">CUT</span>` :
+                           d.wd  ? `<span class="pos cut">WD</span>` :
+                                   `<span class="pos">${d.pos}</span>`;
+        return `<span class="golfer-tag">${d.name} ${posDisplay}</span>`;
+      }).join('');
+    } else {
+      golferTagsHtml = [e.g1, e.g2, e.g3].map(g =>
+        `<span class="golfer-tag">${g} <span class="pos" style="color:var(--muted)">—</span></span>`
+      ).join('');
+    }
+
+    let scoreHtml = '';
+    if (!hasLive) {
+      scoreHtml = `<div class="pending-score">—</div><div class="score-detail">Awaiting scores</div>`;
+    } else if (r && r.total < 9000) {
+      const scoreClass = pos === 1 ? 'score-cell leading' : 'score-cell';
+      scoreHtml = `<div class="${scoreClass}">${r.total}</div><div class="score-detail">${[e.g1,e.g2,e.g3].map(n => { const d = findGolfer(n); return d ? (d.cut ? settings.cutPenalty : d.posNum) : '?' }).join(' + ')}</div>`;
+    } else {
+      scoreHtml = `<div class="score-cell" style="opacity:0.4">—</div>`;
+    }
+
+    const bestInfo = r && r.bestPos < 9999 ? `Best: ${r.bestPos === 1 ? '🏆' : 'T' + r.bestPos}` : '—';
+    
+    // Tiebreak context
+    let tbLabel = '';
+    if (rank > 0 && r && ranked[rank-1].result) {
+      const prev = ranked[rank-1].result;
+      if (r.total === prev.total) {
+        if (r.bestPos !== prev.bestPos) tbLabel = 'TB1';
+        else if (r.bestRound !== prev.bestRound) tbLabel = 'TB2';
+        else tbLabel = 'TB3';
+      }
+    }
+
+    html += `
+      <tr class="${!hasLive || (r && r.total >= 9000) ? 'pending-row' : ''}">
+        <td class="rank-cell ${rankClass}">${pos}</td>
+        <td>
+          <div class="entrant-name">${e.name}</div>
+          <div class="golfer-tags">${golferTagsHtml}</div>
+          ${tbLabel ? `<span class="tiebreak-label">${tbLabel} tiebreaker</span>` : ''}
+        </td>
+        <td>${scoreHtml}</td>
+        <td style="font-family:DM Mono,monospace; font-size:0.8rem; color:var(--muted)">${bestInfo}</td>
+        <td class="prediction-cell">${e.pred !== null && e.pred !== undefined ? (e.pred > 0 ? '+' : '') + e.pred : '—'}</td>
+        <td style="text-align:right">
+          <button class="btn btn-sm" onclick="openEdit(${item.idx})">Edit</button>
+        </td>
+      </tr>`;
+  });
+
+  tbody.innerHTML = html;
+}
+
+function renderGolfLeaderboard() {
+  const tbody = document.getElementById('golf-lb-tbody');
+  if (!liveField.length) {
+    tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:2rem;color:var(--muted);font-family:DM Mono,monospace;font-size:0.8rem;">No live data yet. Tournament may not have started.</td></tr>';
+    return;
+  }
+
+  // Collect all picked golfer names for highlighting
+  const picked = new Set();
+  entrants.forEach(e => [e.g1, e.g2, e.g3].forEach(n => {
+    if (n) picked.add(n.trim().toLowerCase());
+  }));
+
+  function isPickedName(name) {
+    const n = name.toLowerCase();
+    return [...picked].some(p => n.includes(p) || p.includes(n.split(' ').pop()));
+  }
+
+  let html = '';
+  liveField.forEach(p => {
+    const hi = isPickedName(p.name);
+    const scoreClass = (p.score || '').startsWith('-') ? 'under' : (p.score === 'E' || p.score === '0') ? 'even' : 'over';
+
+    html += `<tr class="${hi ? 'highlight-row' : ''}">
+      <td class="golf-pos">${p.pos}</td>
+      <td class="golf-name">${p.name}${p.cut ? '<span class="cut-tag">CUT</span>' : ''}${p.wd ? '<span class="wd-tag">WD</span>' : ''}</td>
+      <td class="golf-score ${scoreClass}">${p.score}</td>
+      <td class="golf-thru">${p.thru}</td>
+      <td class="golf-r1">${p.r1}</td>
+      <td class="golf-r2">${p.r2}</td>
+      <td class="golf-r3">${p.r3}</td>
+      <td class="golf-r4">${p.r4}</td>
+      <td class="golf-r1" style="font-weight:600">${[p.r1,p.r2,p.r3,p.r4].filter(Boolean).reduce((s,r)=>s+(parseInt(r)||0),0)||''}</td>
+    </tr>`;
+  });
+
+  tbody.innerHTML = html;
+  document.getElementById('glb-meta').textContent = `${liveField.length} players · highlighted = picked`;
+}
+
+function renderAdminList() {
+  const el = document.getElementById('entrant-list');
+  if (!entrants.length) {
+    el.innerHTML = '<p style="color:var(--muted);font-size:0.85rem;margin-top:1rem;">No entries yet.</p>';
+    return;
+  }
+
+  el.innerHTML = entrants.map((e, i) => `
+    <div class="entrant-card">
+      <div class="entrant-card-name">${e.name}</div>
+      <div class="entrant-card-golfers">
+        ${[e.g1, e.g2, e.g3].map(g => `<span class="golfer-tag">${g}</span>`).join('')}
+        <span class="golfer-tag" style="background:#f5f5f5; color:var(--muted)">Pred: ${e.pred !== null && e.pred !== undefined ? (e.pred > 0 ? '+' : '') + e.pred : '—'}</span>
+      </div>
+      <div class="entrant-card-actions">
+        <button class="btn btn-sm" onclick="openEdit(${i})">Edit</button>
+        <button class="btn btn-danger" onclick="deleteEntrant(${i})">✕</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+// ══════════════════════════════════════════════
+//  ENTRANT CRUD
+// ══════════════════════════════════════════════
+function addEntrant() {
+  const name = document.getElementById('f-name').value.trim();
+  const g1 = document.getElementById('f-g1').value.trim();
+  const g2 = document.getElementById('f-g2').value.trim();
+  const g3 = document.getElementById('f-g3').value.trim();
+  const pred = document.getElementById('f-pred').value;
+
+  if (!name || !g1 || !g2 || !g3) {
+    toast('Please fill in name and all 3 golfers');
+    return;
+  }
+
+  entrants.push({ name, g1, g2, g3, pred: pred !== '' ? parseInt(pred) : null });
+  save();
+  renderAll();
+
+  document.getElementById('f-name').value = '';
+  document.getElementById('f-g1').value = '';
+  document.getElementById('f-g2').value = '';
+  document.getElementById('f-g3').value = '';
+  document.getElementById('f-pred').value = '';
+
+  toast(`${name} added!`);
+}
+
+function deleteEntrant(i) {
+  if (!confirm(`Remove ${entrants[i].name}?`)) return;
+  entrants.splice(i, 1);
+  save();
+  renderAll();
+}
+
+function openEdit(i) {
+  const e = entrants[i];
+  document.getElementById('edit-idx').value = i;
+  document.getElementById('edit-name').value = e.name;
+  document.getElementById('edit-g1').value = e.g1;
+  document.getElementById('edit-g2').value = e.g2;
+  document.getElementById('edit-g3').value = e.g3;
+  document.getElementById('edit-pred').value = e.pred !== null && e.pred !== undefined ? e.pred : '';
+  document.getElementById('edit-modal').classList.add('open');
+}
+
+function closeModal() {
+  document.getElementById('edit-modal').classList.remove('open');
+  ['pd-e1','pd-e2','pd-e3'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.classList.remove('open');
+  });
+}
+
+function saveEdit() {
+  const i = parseInt(document.getElementById('edit-idx').value);
+  entrants[i] = {
+    name: document.getElementById('edit-name').value.trim(),
+    g1: document.getElementById('edit-g1').value.trim(),
+    g2: document.getElementById('edit-g2').value.trim(),
+    g3: document.getElementById('edit-g3').value.trim(),
+    pred: document.getElementById('edit-pred').value !== '' ? parseInt(document.getElementById('edit-pred').value) : null
+  };
+  save();
+  renderAll();
+  closeModal();
+  toast('Entry updated');
+}
+
+// ══════════════════════════════════════════════
+//  CONFIRMED FIELD — PGA Championship 2026
+// ══════════════════════════════════════════════
+const CONFIRMED_FIELD = [
+  {name:"Ludvig Åberg", country:"SWEDEN"},
+  {name:"Angel Ayora", country:"SPAIN"},
+  {name:"Derek Berg", country:"USA"},
+  {name:"Daniel Berger", country:"USA"},
+  {name:"Christiaan Bezuidenhout", country:"SOUTH AFRICA"},
+  {name:"Akshay Bhatia", country:"USA"},
+  {name:"Francisco Bide", country:"ARGENTINA"},
+  {name:"Chandler Blanchet", country:"USA"},
+  {name:"Michael Block", country:"USA"},
+  {name:"Keegan Bradley", country:"USA"},
+  {name:"Michael Brennan", country:"USA"},
+  {name:"Jacob Bridgeman", country:"USA"},
+  {name:"Daniel Brown", country:"ENGLAND"},
+  {name:"Sam Burns", country:"USA"},
+  {name:"Brian Campbell", country:"USA"},
+  {name:"Patrick Cantlay", country:"USA"},
+  {name:"Ricky Castillo", country:"USA"},
+  {name:"Bud Cauley", country:"USA"},
+  {name:"Stewart Cink", country:"USA"},
+  {name:"Wyndham Clark", country:"USA"},
+  {name:"Tyler Collet", country:"USA"},
+  {name:"Corey Conners", country:"CANADA"},
+  {name:"Pierceson Coody", country:"USA"},
+  {name:"Jason Day", country:"AUSTRALIA"},
+  {name:"Bryson DeChambeau", country:"USA"},
+  {name:"Thomas Detry", country:"BELGIUM"},
+  {name:"Luke Donald", country:"ENGLAND"},
+  {name:"Jesse Droemer", country:"USA"},
+  {name:"Jason Dufner", country:"USA"},
+  {name:"Nico Echavarria", country:"COLOMBIA"},
+  {name:"Harris English", country:"USA"},
+  {name:"Bryce Fisher", country:"USA"},
+  {name:"Steven Fisk", country:"USA"},
+  {name:"Alex Fitzpatrick", country:"ENGLAND"},
+  {name:"Matthew Fitzpatrick", country:"ENGLAND"},
+  {name:"Tommy Fleetwood", country:"ENGLAND"},
+  {name:"Rickie Fowler", country:"USA"},
+  {name:"Ryan Fox", country:"NEW ZEALAND"},
+  {name:"Chris Gabriele", country:"USA"},
+  {name:"Mark Geddes", country:"ENGLAND"},
+  {name:"Ryan Gerard", country:"USA"},
+  {name:"Lucas Glover", country:"USA"},
+  {name:"Chris Gotterup", country:"USA"},
+  {name:"Max Greyserman", country:"USA"},
+  {name:"Ben Griffin", country:"USA"},
+  {name:"Emiliano Grillo", country:"ARGENTINA"},
+  {name:"Jordan Gumberg", country:"USA"},
+  {name:"Harry Hall", country:"ENGLAND"},
+  {name:"Brian Harman", country:"USA"},
+  {name:"Pádraig Harrington", country:"IRELAND"},
+  {name:"Tyrrell Hatton", country:"ENGLAND"},
+  {name:"Zach Haynes", country:"USA"},
+  {name:"Russell Henley", country:"USA"},
+  {name:"Kazuki Higa", country:"JAPAN"},
+  {name:"Garrick Higgo", country:"SOUTH AFRICA"},
+  {name:"Joe Highsmith", country:"USA"},
+  {name:"Daniel Hillier", country:"NEW ZEALAND"},
+  {name:"Ryo Hisatsune", country:"JAPAN"},
+  {name:"Rico Hoey", country:"PHILIPPINES"},
+  {name:"Nicolai Højgaard", country:"DENMARK"},
+  {name:"Rasmus Højgaard", country:"DENMARK"},
+  {name:"Ian Holt", country:"USA"},
+  {name:"Max Homa", country:"USA"},
+  {name:"Billy Horschel", country:"USA"},
+  {name:"Viktor Hovland", country:"NORWAY"},
+  {name:"Austin Hurt", country:"USA"},
+  {name:"Sungjae Im", country:"SOUTH KOREA"},
+  {name:"Stephan Jaeger", country:"GERMANY"},
+  {name:"Casey Jarvis", country:"SOUTH AFRICA"},
+  {name:"Dustin Johnson", country:"USA"},
+  {name:"Jared Jones", country:"USA"},
+  {name:"Kota Kaneko", country:"JAPAN"},
+  {name:"Michael Kartrude", country:"USA"},
+  {name:"Martin Kaymer", country:"GERMANY"},
+  {name:"John Keefer", country:"USA"},
+  {name:"Ben Kern", country:"USA"},
+  {name:"Michael Kim", country:"USA"},
+  {name:"Si Woo Kim", country:"SOUTH KOREA"},
+  {name:"Chris Kirk", country:"USA"},
+  {name:"Kurt Kitayama", country:"USA"},
+  {name:"Jake Knapp", country:"USA"},
+  {name:"Brooks Koepka", country:"USA"},
+  {name:"Min Woo Lee", country:"AUSTRALIA"},
+  {name:"Ryan Lenahan", country:"USA"},
+  {name:"Haotong Li", country:"CHINA"},
+  {name:"Mikael Lindberg", country:"SWEDEN"},
+  {name:"David Lipsky", country:"USA"},
+  {name:"Shane Lowry", country:"IRELAND"},
+  {name:"Robert MacIntyre", country:"SCOTLAND"},
+  {name:"Hideki Matsuyama", country:"JAPAN"},
+  {name:"Denny McCarthy", country:"USA"},
+  {name:"Matt McCarty", country:"USA"},
+  {name:"Paul McClure", country:"USA"},
+  {name:"Max McGreevy", country:"USA"},
+  {name:"Rory McIlroy", country:"N. IRELAND"},
+  {name:"Tom McKibbin", country:"N. IRELAND"},
+  {name:"Maverick McNealy", country:"USA"},
+  {name:"Shaun Micheel", country:"USA"},
+  {name:"Keith Mitchell", country:"USA"},
+  {name:"Collin Morikawa", country:"USA"},
+  {name:"William Mouw", country:"USA"},
+  {name:"Rasmus Neergaard-Petersen", country:"DENMARK"},
+  {name:"Joaquin Niemann", country:"CHILE"},
+  {name:"Alex Noren", country:"SWEDEN"},
+  {name:"Andrew Novak", country:"USA"},
+  {name:"John Parry", country:"ENGLAND"},
+  {name:"Taylor Pendrith", country:"CANADA"},
+  {name:"Marco Penge", country:"ENGLAND"},
+  {name:"Ben Polland", country:"USA"},
+  {name:"J.T. Poston", country:"USA"},
+  {name:"Aldrich Potgieter", country:"SOUTH AFRICA"},
+  {name:"David Puig", country:"SPAIN"},
+  {name:"Andrew Putnam", country:"USA"},
+  {name:"Jon Rahm", country:"SPAIN"},
+  {name:"Aaron Rai", country:"ENGLAND"},
+  {name:"Patrick Reed", country:"USA"},
+  {name:"Kristoffer Reitan", country:"NORWAY"},
+  {name:"Davis Riley", country:"USA"},
+  {name:"Patrick Rodgers", country:"USA"},
+  {name:"Justin Rose", country:"ENGLAND"},
+  {name:"Adrien Saddier", country:"FRANCE"},
+  {name:"Garrett Sapp", country:"USA"},
+  {name:"Jayden Schaper", country:"SOUTH AFRICA"},
+  {name:"Xander Schauffele", country:"USA"},
+  {name:"Scottie Scheffler", country:"USA"},
+  {name:"Adam Schenk", country:"USA"},
+  {name:"Matti Schmid", country:"GERMANY"},
+  {name:"Adam Scott", country:"AUSTRALIA"},
+  {name:"Braden Shattuck", country:"USA"},
+  {name:"Alex Smalley", country:"USA"},
+  {name:"Cameron Smith", country:"AUSTRALIA"},
+  {name:"Jordan Smith", country:"ENGLAND"},
+  {name:"Austin Smotherman", country:"USA"},
+  {name:"Elvis Smylie", country:"AUSTRALIA"},
+  {name:"Travis Smyth", country:"AUSTRALIA"},
+  {name:"J.J. Spaun", country:"USA"},
+  {name:"Jordan Spieth", country:"USA"},
+  {name:"Sam Stevens", country:"USA"},
+  {name:"Sepp Straka", country:"AUSTRIA"},
+  {name:"Andy Sullivan", country:"ENGLAND"},
+  {name:"Nick Taylor", country:"CANADA"},
+  {name:"Sahith Theegala", country:"USA"},
+  {name:"Justin Thomas", country:"USA"},
+  {name:"Michael Thorbjornsen", country:"USA"},
+  {name:"Sami Valimaki", country:"FINLAND"},
+  {name:"Jhonattan Vegas", country:"VENEZUELA"},
+  {name:"Ryan Vermeer", country:"USA"},
+  {name:"Jimmy Walker", country:"USA"},
+  {name:"Matt Wallace", country:"ENGLAND"},
+  {name:"Bernd Wiesberger", country:"AUSTRIA"},
+  {name:"Timothy Wiseman", country:"USA"},
+  {name:"Gary Woodland", country:"USA"},
+  {name:"Y.E. Yang", country:"SOUTH KOREA"},
+  {name:"Cameron Young", country:"USA"},
+].sort((a,b) => a.name.localeCompare(b.name));
+
+// ══════════════════════════════════════════════
+//  PLAYER PICKER
+// ══════════════════════════════════════════════
+let pickerKbdIdx = {};
+
+function pickerGetSource(dropId) {
+  // Merge confirmed field names with any live data names
+  const liveNames = new Set(liveField.map(p => p.name));
+  const allNames = [...CONFIRMED_FIELD];
+  liveField.forEach(p => {
+    if (!CONFIRMED_FIELD.find(f => f.name === p.name)) {
+      allNames.push({name: p.name, country: ''});
+    }
+  });
+  return allNames;
+}
+
+function pickerRender(dropId, query) {
+  const list = document.getElementById(dropId);
+  if (!list) return;
+  const source = pickerGetSource(dropId);
+  const q = query.trim().toLowerCase();
+  const matches = q.length === 0
+    ? source
+    : source.filter(p => p.name.toLowerCase().includes(q));
+
+  if (!matches.length) {
+    list.innerHTML = '<div class="picker-empty">No players found</div>';
+  } else {
+    list.innerHTML = matches.map((p, i) => {
+      const liveData = liveField.find(lp => lp.name === p.name);
+      const posStr = liveData ? ` · ${liveData.pos}` : '';
+      return `<div class="picker-item" data-name="${p.name}" onmousedown="pickerSelect(event,'${dropId}')">
+        <span>${p.name}${posStr}</span>
+        <span class="pi-country">${p.country}</span>
+      </div>`;
+    }).join('');
+  }
+  pickerKbdIdx[dropId] = -1;
+}
+
+function pickerOpen(dropId) {
+  const list = document.getElementById(dropId);
+  if (!list) return;
+  const input = list.previousElementSibling;
+  pickerRender(dropId, input ? input.value : '');
+  document.querySelectorAll('.picker-dropdown').forEach(d => {
+    if (d.id !== dropId) d.classList.remove('open');
+  });
+  list.classList.add('open');
+}
+
+function pickerFilter(input, dropId) {
+  pickerRender(dropId, input.value);
+  document.getElementById(dropId).classList.add('open');
+}
+
+function pickerSelect(event, dropId) {
+  event.preventDefault();
+  const name = event.currentTarget.dataset.name;
+  const list = document.getElementById(dropId);
+  const input = list.previousElementSibling;
+  if (input) input.value = name;
+  list.classList.remove('open');
+}
+
+function pickerKey(event, dropId, input) {
+  const list = document.getElementById(dropId);
+  if (!list.classList.contains('open')) {
+    if (event.key === 'ArrowDown' || event.key === 'Enter') { pickerOpen(dropId); return; }
+  }
+  const items = list.querySelectorAll('.picker-item');
+  if (!items.length) return;
+  let idx = pickerKbdIdx[dropId] || -1;
+
+  if (event.key === 'ArrowDown') {
+    event.preventDefault();
+    idx = Math.min(idx + 1, items.length - 1);
+  } else if (event.key === 'ArrowUp') {
+    event.preventDefault();
+    idx = Math.max(idx - 1, -1);
+  } else if (event.key === 'Enter' && idx >= 0) {
+    event.preventDefault();
+    items[idx].dispatchEvent(new MouseEvent('mousedown'));
+    return;
+  } else if (event.key === 'Escape') {
+    list.classList.remove('open');
+    return;
+  } else {
+    return;
+  }
+
+  pickerKbdIdx[dropId] = idx;
+  items.forEach((item, i) => item.classList.toggle('kbd-focus', i === idx));
+  if (idx >= 0) items[idx].scrollIntoView({ block: 'nearest' });
+}
+
+// Close pickers on outside click
+document.addEventListener('click', e => {
+  if (!e.target.closest('.picker-wrap')) {
+    document.querySelectorAll('.picker-dropdown').forEach(l => l.classList.remove('open'));
+  }
+});
+
+// ══════════════════════════════════════════════
+//  IMPORT / EXPORT
+// ══════════════════════════════════════════════
+function exportData() {
+  const blob = new Blob([JSON.stringify({ entrants, settings }, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'pga-sweep-data.json';
+  a.click();
+}
+
+function importData(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const data = JSON.parse(e.target.result);
+      if (data.entrants) entrants = data.entrants;
+      if (data.settings) settings = { ...settings, ...data.settings };
+      save();
+      applySettings();
+      renderAll();
+      toast('Data imported successfully!');
+    } catch(ex) {
+      toast('Import failed — invalid JSON');
+    }
+  };
+  reader.readAsText(file);
+  event.target.value = '';
+}
+
+function clearAllData() {
+  if (!confirm('Clear ALL entries and settings? This cannot be undone.')) return;
+  entrants = [];
+  localStorage.removeItem('pgasweep_entrants');
+  localStorage.removeItem('pgasweep_settings');
+  renderAll();
+  toast('All data cleared');
+}
+
+// ══════════════════════════════════════════════
+//  TOAST
+// ══════════════════════════════════════════════
+function toast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  setTimeout(() => el.classList.remove('show'), 3000);
+}
+
+// ══════════════════════════════════════════════
+//  INIT
+// ══════════════════════════════════════════════
+load();
+renderAll();
+refreshScores(false);
+
+// Auto-refresh every 3 minutes during likely tournament hours
+autoRefreshInterval = setInterval(() => {
+  const h = new Date().getHours();
+  if (h >= 8 && h <= 22) refreshScores(false);
+}, 3 * 60 * 1000);
+</script>
+
+</body>
+</html>
