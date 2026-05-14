@@ -417,7 +417,6 @@ async function fetchLive(){
 function parseESPN(d){
   var f=[];
   try{
-    // Find the PGA Championship event — may be first or matched by name
     var events=d.events||[];
     var ev=events.find(function(e){
       var n=(e.name||'').toLowerCase();
@@ -426,73 +425,87 @@ function parseESPN(d){
     if(!ev)return f;
     var co=ev.competitions&&ev.competitions[0];if(!co)return f;
 
+    // Log raw first competitor so we can see the structure
+    if(co.competitors&&co.competitors.length){
+      var s=co.competitors[0].status||{};
+      console.log('ESPN raw status sample:',JSON.stringify({
+        displayValue:s.displayValue,
+        position:s.position,
+        thru:s.thru,
+        type:s.type&&s.type.name,
+        score:co.competitors[0].score,
+        linescores:(co.competitors[0].linescores||[]).slice(0,2)
+      }));
+    }
+
     (co.competitors||[]).forEach(function(c,idx){
       var nm=(c.athlete&&(c.athlete.displayName||c.athlete.fullName))||'?';
       var st=(c.status&&c.status.type&&c.status.type.name)||'';
       var cut=st==='CUT'||(c.status&&c.status.thru==='CUT');
       var wd=st==='WD'||st==='DQ';
 
-      // Position — ESPN uses position.displayName for leaderboard position e.g. "1", "T3"
-      var posDisp=(c.status&&c.status.position&&c.status.position.displayName)||'';
-      // displayValue can be tee time before play or position during play
+      // ESPN position — try all known locations
+      // During round: status.position.displayName = "T3", status.displayValue = "T3"
+      // status.position.id is numeric rank
+      var posObj=c.status&&c.status.position;
+      var posDisp=(posObj&&(posObj.displayName||posObj.name))||'';
       var dispVal=(c.status&&c.status.displayValue)||'';
-      var ps=posDisp||'';
-      if(cut)ps='CUT';
-      if(wd)ps='WD';
+      // sortOrder is a reliable numeric rank ESPN always provides
+      var sortOrder=c.sortOrder||c.status&&c.status.sortOrder;
 
-      // posNum: extract number from position (T3->3, 1->1, CUT/WD handled separately)
-      var posNum=999;
-      if(cut||wd){
-        // Use a high number but preserve relative order from array position
-        posNum=500+idx;
-      } else if(ps){
+      var ps='';
+      if(cut){ps='CUT';}
+      else if(wd){ps='WD';}
+      else{
+        // Prefer position object, fall back to displayValue
+        ps=posDisp||dispVal||'';
+        // displayValue can be a tee time like "1:30 PM" — ignore those
+        if(ps&&(ps.indexOf('AM')>=0||ps.indexOf('PM')>=0||ps.indexOf(':')>=0))ps='';
+      }
+
+      // posNum for sorting and scoring
+      var posNum;
+      if(cut){posNum=500+idx;}
+      else if(wd){posNum=600+idx;}
+      else if(ps&&ps!=='-'&&ps!==''){
         var m=ps.replace(/^T/,'').match(/\d+/);
-        if(m)posNum=parseInt(m[0]);
-      }
-      // If no position yet (pre-round), use sort order from array (tee time order)
-      if(!ps||ps==='-'||ps===''){
-        ps='-';
-        posNum=200+idx; // pre-round: preserve tee time order
+        posNum=m?parseInt(m[0]):999;
+      } else if(sortOrder){
+        // sortOrder is ESPN's internal rank — use it directly
+        posNum=parseInt(sortOrder)||999;
+      } else {
+        posNum=999;
       }
 
-      // Score: ESPN returns today's round score in c.score; total to par in statistics
-      // Try to get total-to-par from statistics array first
-      var totalToPar='';
-      var stats=c.statistics||[];
-      for(var si=0;si<stats.length;si++){
-        if(stats[si].name==='scoreToPar'||stats[si].abbreviation==='TOT'){
-          totalToPar=stats[si].displayValue||stats[si].value||'';break;
-        }
-      }
-      // Fallback: use c.score (today's round) if no total available
-      var scoreDisplay=totalToPar||c.score||'';
+      // Score — c.score is current round score to par (R1 only) or total to par (R2+)
+      // linescores[i].value = stroke total for that round (e.g. 68)
+      // linescores[i].displayValue = score to par for that round (e.g. "-2")
+      var scoreToPar=(c.score||'').trim();
+      // Normalise: ESPN sometimes returns "0" instead of "E"
+      if(scoreToPar==='0')scoreToPar='E';
 
-      // Thru: hole number completed, or tee time if not started, or 'F' if finished
       var thru=(c.status&&c.status.thru)||'';
-      // If thru looks like a tee time (contains AM/PM or colon), show it as tee time
-      var thruDisplay=thru;
-      if(thru&&!/^\d+$/.test(thru)&&thru!=='F')thruDisplay=thru; // keep as-is (tee time or 'F')
+      // Tee time strings contain ':' and AM/PM — replace with '-'
+      if(thru&&(thru.indexOf('AM')>=0||thru.indexOf('PM')>=0))thru='-';
 
-      // Round scores from linescores
+      // linescores: value = stroke total (68), displayValue = to-par ("-2")
       var ls=c.linescores||[];
-      var rd=ls.map(function(l){
-        // displayValue is the round score relative to par (e.g. "-3"), value is strokes
-        return l.value?String(l.value):(l.displayValue||'');
-      });
-      var r1=rd[0]||'',r2=rd[1]||'',r3=rd[2]||'',r4=rd[3]||'';
-      // For best-round tiebreaker we want stroke totals (positive integers)
-      var ns=[r1,r2,r3,r4].map(Number).filter(function(n){return !isNaN(n)&&n>60&&n<90;});
+      var r1=(ls[0]&&ls[0].value&&String(ls[0].value))||'';
+      var r2=(ls[1]&&ls[1].value&&String(ls[1].value))||'';
+      var r3=(ls[2]&&ls[2].value&&String(ls[2].value))||'';
+      var r4=(ls[3]&&ls[3].value&&String(ls[3].value))||'';
 
-      f.push({
-        name:nm,pos:ps,posNum:posNum,
-        score:scoreDisplay,thru:thruDisplay,
-        r1:r1,r2:r2,r3:r3,r4:r4,
-        cut:cut,wd:wd,
-        br:ns.length?Math.min.apply(null,ns):null
-      });
+      // bestRound for tiebreaker — lowest stroke total
+      var rNums=[r1,r2,r3,r4].map(Number).filter(function(n){return n>=60&&n<=85;});
+
+      f.push({name:nm,pos:ps||'-',posNum:posNum,score:scoreToPar,thru:thru,
+        r1:r1,r2:r2,r3:r3,r4:r4,cut:cut,wd:wd,
+        br:rNums.length?Math.min.apply(null,rNums):null});
     });
+
+    // Sort by posNum (=leaderboard position)
     f.sort(function(a,b){return a.posNum-b.posNum;});
-    if(f.length)console.log('ESPN parsed',f.length,'players, leader:',f[0].name,f[0].pos,f[0].score,'thru',f[0].thru);
+    console.log('ESPN OK:',f.length,'players | P1:',f[0]&&(f[0].name+' pos='+f[0].pos+' posNum='+f[0].posNum+' score='+f[0].score+' thru='+f[0].thru));
   }catch(e){console.warn('ESPN parse error:',e);}
   return f;
 }
