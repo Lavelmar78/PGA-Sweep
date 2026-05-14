@@ -243,6 +243,7 @@ input:focus,select:focus,textarea:focus{border-color:#2d8a47}
     <h3>Data</h3>
     <div style="display:flex;gap:.65rem;flex-wrap:wrap;margin-bottom:.9rem">
       <button class="btn bp" onclick="expD()">Export JSON</button>
+      <button class="btn bs" onclick="showDebug()">Debug ESPN</button>
       <button class="btn bs" onclick="document.getElementById('impf').click()">Import JSON</button>
       <input type="file" id="impf" accept=".json" style="display:none" onchange="impD(event)">
       <button class="btn bd" onclick="clrAll()">Clear All</button>
@@ -308,6 +309,17 @@ input:focus,select:focus,textarea:focus{border-color:#2d8a47}
   </div>
 </div>
 
+<div class="mov" id="dbgmod">
+  <div class="mod" style="max-width:600px">
+    <h2>ESPN Raw Data</h2>
+    <p style="font-size:.8rem;color:#6b8070;margin-bottom:.75rem">First 3 players from ESPN API — shows exactly what fields are being returned.</p>
+    <textarea id="dbgtxt" readonly style="width:100%;height:320px;font-family:'DM Mono',monospace;font-size:.65rem;padding:.75rem;border:1.5px solid #d4e4d8;border-radius:7px;background:#faf7f0;resize:none;color:#1c2e21;line-height:1.5"></textarea>
+    <div class="mact">
+      <button class="btn bs" onclick="clsMod('dbgmod')">Close</button>
+      <button class="btn bp" onclick="cpyDbg()">Copy</button>
+    </div>
+  </div>
+</div>
 <div class="toast" id="tst"></div>
 
 <script>
@@ -791,6 +803,83 @@ function impD(ev){
 }
 function clrAll(){if(!confirm('Clear ALL entries?'))return;ENT=[];localStorage.removeItem('pgs_e');renderAll();toast('Cleared');}
 function toast(msg){var el=document.getElementById('tst');el.textContent=msg;el.classList.add('show');setTimeout(function(){el.classList.remove('show');},3000);}
+async function showDebug(){
+  document.getElementById('dbgtxt').value='Fetching...';
+  document.getElementById('dbgmod').classList.add('open');
+  var id=SET.espnEventId||'401811947';
+  var urls=[
+    'https://site.web.api.espn.com/apis/site/v2/sports/golf/pga/scoreboard?event='+id+'&lang=en&region=gb',
+    'https://site.api.espn.com/apis/site/v2/sports/golf/pga/scoreboard?event='+id,
+    'https://site.web.api.espn.com/apis/site/v2/sports/golf/pga/scoreboard?lang=en&region=gb'
+  ];
+  var out='';
+  for(var i=0;i<urls.length;i++){
+    out+='=== URL '+i+' ===
+'+urls[i]+'
+';
+    try{
+      var r=await fetch(urls[i]);
+      out+='Status: '+r.status+'
+';
+      if(!r.ok){out+='FAILED
+
+';continue;}
+      var d=await r.json();
+      var events=d.events||[];
+      out+='Events: '+events.length+'
+';
+      if(!events.length){out+=JSON.stringify(d).slice(0,300)+'
+
+';continue;}
+      var ev=events[0];
+      out+='Event name: '+ev.name+'
+';
+      var co=ev.competitions&&ev.competitions[0];
+      if(!co){out+='No competition
+
+';continue;}
+      out+='Competitors: '+(co.competitors||[]).length+'
+
+';
+      // Dump first 3 competitors raw
+      (co.competitors||[]).slice(0,3).forEach(function(c,ci){
+        out+='--- Competitor '+ci+' ---
+';
+        out+='name: '+((c.athlete&&c.athlete.displayName)||'?')+'
+';
+        out+='score: '+c.score+'
+';
+        out+='sortOrder: '+c.sortOrder+'
+';
+        var s=c.status||{};
+        out+='status.displayValue: '+s.displayValue+'
+';
+        out+='status.thru: '+s.thru+'
+';
+        out+='status.type.name: '+(s.type&&s.type.name)+'
+';
+        out+='status.position: '+JSON.stringify(s.position)+'
+';
+        out+='linescores: '+JSON.stringify((c.linescores||[]).map(function(l){return {v:l.value,dv:l.displayValue};})).slice(0,200)+'
+';
+        out+='
+';
+      });
+      out+='
+';
+      // If this URL worked, no need to check others
+      if(events.length)break;
+    }catch(e){out+='ERROR: '+e+'
+
+';}
+  }
+  document.getElementById('dbgtxt').value=out;
+}
+function cpyDbg(){
+  var ta=document.getElementById('dbgtxt');ta.select();ta.setSelectionRange(0,99999);
+  try{navigator.clipboard.writeText(ta.value).then(function(){toast('Copied!');});}
+  catch(e){try{document.execCommand('copy');toast('Copied!');}catch(e2){}}
+}
 load();renderAll();doRefresh(false);
 setInterval(function(){var h=new Date().getHours();if(h>=8&&h<=22)doRefresh(false);},3*60*1000);
 </script>
