@@ -509,24 +509,39 @@ function parseESPN(d){
   }catch(e){console.warn("ESPN parse error:",e);}
   return f;
 }
-function nm(s){return s.toLowerCase().replace(/[^a-z0-9 ]/g,'').replace(/\s+/g,' ').trim();}
+function nm(s){
+  return s.toLowerCase()
+    // Transliterate accented chars before stripping — å/ä->a, ö->o, é->e, etc.
+    .replace(/[àáâãäå]/g,'a').replace(/[èéêë]/g,'e').replace(/[ìíîï]/g,'i')
+    .replace(/[òóôõö]/g,'o').replace(/[ùúûü]/g,'u').replace(/[ýÿ]/g,'y')
+    .replace(/[ñ]/g,'n').replace(/[ç]/g,'c').replace(/[ß]/g,'ss')
+    .replace(/[^a-z0-9 ]/g,'').replace(/\s+/g,' ').trim();
+}
+// Common nickname map — ESPN short names -> full names used in picker
+var NICKNAMES={"matt":"matthew","rory":"rory","jon":"jon","max":"max"};
 function findG(name){
   if(!name||!LIVE.length)return null;
   var n=nm(name);
-  // 1. Exact match
+  // 1. Exact normalised match
   var g=LIVE.find(function(p){return nm(p.name)===n;});if(g)return g;
-  // 2. All words match (handles accent stripping e.g. Aberg/Sberg)
+  // 2. All normalised words match regardless of order
   var qw=n.split(' ');
   g=LIVE.find(function(p){
     var pw=nm(p.name).split(' ');
     return pw.length===qw.length&&qw.every(function(w){return pw.indexOf(w)>=0;});
   });if(g)return g;
-  // 3. First + last match only (no last-name-only to avoid Fitzpatrick/Hojgaard ambiguity)
+  // 3. Last name + first initial match (catches Matt/Matthew, Rory/Rory etc)
   var pts=n.split(' '),last=pts[pts.length-1],first=pts[0];
   if(pts.length>=2){
+    // Exact first+last
     g=LIVE.find(function(p){
       var pp=nm(p.name).split(' ');
-      return pp[0]===first&&pp[pp.length-1]===last;
+      return pp[pp.length-1]===last&&pp[0]===first;
+    });if(g)return g;
+    // Nickname: stored name first word starts with ESPN first word (matthew->matt)
+    g=LIVE.find(function(p){
+      var pp=nm(p.name).split(' ');
+      return pp[pp.length-1]===last&&(pp[0].indexOf(first)===0||first.indexOf(pp[0])===0);
     });if(g)return g;
   }
   return null;
