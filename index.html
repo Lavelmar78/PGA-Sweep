@@ -426,99 +426,87 @@ async function fetchLive(){
   }
   return null;
 }
+function parseScore(s){
+  // Convert score string to number for sorting: "-4"=-4, "E"=0, "+2"=2, "-"=999
+  if(!s||s==="-"||s==="")return 999;
+  if(s==="E")return 0;
+  var n=parseInt(s);
+  return isNaN(n)?999:n;
+}
+
 function parseESPN(d){
   var f=[];
   try{
     var events=d.events||[];
     var ev=events.find(function(e){
-      var n=(e.name||'').toLowerCase();
-      return n.includes('pga championship')||n.includes('pga champ');
+      return (e.name||"").toLowerCase().includes("pga championship");
     })||events[0];
     if(!ev)return f;
     var co=ev.competitions&&ev.competitions[0];if(!co)return f;
 
-    // Log raw first competitor so we can see the structure
-    if(co.competitors&&co.competitors.length){
-      var s=co.competitors[0].status||{};
-      console.log('ESPN raw status sample:',JSON.stringify({
-        displayValue:s.displayValue,
-        position:s.position,
-        thru:s.thru,
-        type:s.type&&s.type.name,
-        score:co.competitors[0].score,
-        linescores:(co.competitors[0].linescores||[]).slice(0,2)
-      }));
-    }
+    (co.competitors||[]).forEach(function(c){
+      var name=(c.athlete&&(c.athlete.displayName||c.athlete.fullName))||"?";
 
-    (co.competitors||[]).forEach(function(c,idx){
-      var nm=(c.athlete&&(c.athlete.displayName||c.athlete.fullName))||'?';
-      var st=(c.status&&c.status.type&&c.status.type.name)||'';
-      var cut=st==='CUT'||(c.status&&c.status.thru==='CUT');
-      var wd=st==='WD'||st==='DQ';
+      // Score to par — c.score is the only reliable field ("−4", "E", "+2", "-")
+      var score=(c.score||"").trim();
+      if(score==="0")score="E";
 
-      // ESPN position — try all known locations
-      // During round: status.position.displayName = "T3", status.displayValue = "T3"
-      // status.position.id is numeric rank
-      var posObj=c.status&&c.status.position;
-      var posDisp=(posObj&&(posObj.displayName||posObj.name))||'';
-      var dispVal=(c.status&&c.status.displayValue)||'';
-      // sortOrder is a reliable numeric rank ESPN always provides
-      var sortOrder=c.sortOrder||c.status&&c.status.sortOrder;
-
-      var ps='';
-      if(cut){ps='CUT';}
-      else if(wd){ps='WD';}
-      else{
-        // Prefer position object, fall back to displayValue
-        ps=posDisp||dispVal||'';
-        // displayValue can be a tee time like "1:30 PM" — ignore those
-        if(ps&&(ps.indexOf('AM')>=0||ps.indexOf('PM')>=0||ps.indexOf(':')>=0))ps='';
-      }
-
-      // posNum for sorting and scoring
-      var posNum;
-      if(cut){posNum=500+idx;}
-      else if(wd){posNum=600+idx;}
-      else if(ps&&ps!=='-'&&ps!==''){
-        var m=ps.replace(/^T/,'').match(/\d+/);
-        posNum=m?parseInt(m[0]):999;
-      } else if(sortOrder){
-        // sortOrder is ESPN's internal rank — use it directly
-        posNum=parseInt(sortOrder)||999;
-      } else {
-        posNum=999;
-      }
-
-      // Score — c.score is current round score to par (R1 only) or total to par (R2+)
-      // linescores[i].value = stroke total for that round (e.g. 68)
-      // linescores[i].displayValue = score to par for that round (e.g. "-2")
-      var scoreToPar=(c.score||'').trim();
-      // Normalise: ESPN sometimes returns "0" instead of "E"
-      if(scoreToPar==='0')scoreToPar='E';
-
-      var thru=(c.status&&c.status.thru)||'';
-      // Tee time strings contain ':' and AM/PM — replace with '-'
-      if(thru&&(thru.indexOf('AM')>=0||thru.indexOf('PM')>=0))thru='-';
-
-      // linescores: value = stroke total (68), displayValue = to-par ("-2")
+      // Linescores — from debug: v=holes played (mid-round) OR round strokes (finished)
+      // dv=score to par for that round
+      // Round 1 in progress: ls[0].v = holes completed, ls[0].dv = current score to par
+      // Round 1 finished: ls[0].v = total strokes (e.g. 68), ls[0].dv = round score to par
       var ls=c.linescores||[];
-      var r1=(ls[0]&&ls[0].value&&String(ls[0].value))||'';
-      var r2=(ls[1]&&ls[1].value&&String(ls[1].value))||'';
-      var r3=(ls[2]&&ls[2].value&&String(ls[2].value))||'';
-      var r4=(ls[3]&&ls[3].value&&String(ls[3].value))||'';
+      var ls0=ls[0]||{}, ls1=ls[1]||{}, ls2=ls[2]||{}, ls3=ls[3]||{};
 
-      // bestRound for tiebreaker — lowest stroke total
-      var rNums=[r1,r2,r3,r4].map(Number).filter(function(n){return n>=60&&n<=85;});
+      // Thru holes: during R1 ls[0].v is holes played if < 19, else it's stroke total
+      var thruVal=ls0.v||0;
+      var thru=thruVal>0&&thruVal<=18?String(thruVal):(ls0.dv&&ls0.dv!=="-"?"F":"");
 
-      f.push({name:nm,pos:ps||'-',posNum:posNum,score:scoreToPar,thru:thru,
-        r1:r1,r2:r2,r3:r3,r4:r4,cut:cut,wd:wd,
-        br:rNums.length?Math.min.apply(null,rNums):null});
+      // Round stroke totals — only valid when round is complete (value > 18)
+      var r1=ls0.v&&ls0.v>18?String(ls0.v):"";
+      var r2=ls1.v&&ls1.v>18?String(ls1.v):"";
+      var r3=ls2.v&&ls2.v>18?String(ls2.v):"";
+      var r4=ls3.v&&ls3.v>18?String(ls3.v):"";
+
+      // Round to-par display values
+      var r1dv=ls0.dv||"", r2dv=ls1.dv||"", r3dv=ls2.dv||"", r4dv=ls3.dv||"";
+
+      // Best round for tiebreaker — lowest stroke total across completed rounds
+      var rNums=[r1,r2,r3,r4].map(Number).filter(function(n){return n>60&&n<90;});
+
+      // CUT/WD detection — score will be "CUT" or "WD" or similar
+      var cut=score==="CUT"||(c.status&&c.status.type&&c.status.type.name==="CUT");
+      var wd=score==="WD"||score==="DQ"||(c.status&&c.status.type&&c.status.type.name==="WD");
+
+      f.push({
+        name:name,
+        score:score,
+        scoreNum:parseScore(score),
+        thru:thru,
+        r1:r1||r1dv, r2:r2||r2dv, r3:r3||r3dv, r4:r4||r4dv,
+        cut:cut, wd:wd,
+        br:rNums.length?Math.min.apply(null,rNums):null
+      });
     });
 
-    // Sort by posNum (=leaderboard position)
-    f.sort(function(a,b){return a.posNum-b.posNum;});
-    console.log('ESPN OK:',f.length,'players | P1:',f[0]&&(f[0].name+' pos='+f[0].pos+' posNum='+f[0].posNum+' score='+f[0].score+' thru='+f[0].thru));
-  }catch(e){console.warn('ESPN parse error:',e);}
+    // Sort by score to par — this IS the leaderboard position
+    f.sort(function(a,b){return a.scoreNum-b.scoreNum;});
+
+    // Assign positions after sorting (handles ties with T prefix)
+    var rank=1;
+    for(var i=0;i<f.length;i++){
+      if(f[i].cut||f[i].wd){f[i].pos="CUT";f[i].posNum=500+i;continue;}
+      if(i>0&&f[i].scoreNum===f[i-1].scoreNum){
+        f[i].pos="T"+rank;
+        f[i-1].pos=f[i-1].pos.indexOf("T")===0?f[i-1].pos:"T"+rank;
+      } else {
+        rank=i+1;
+        f[i].pos=String(rank);
+      }
+      f[i].posNum=rank;
+    }
+
+  }catch(e){console.warn("ESPN parse error:",e);}
   return f;
 }
 function nm(s){return s.toLowerCase().replace(/[^a-z0-9 ]/g,'').replace(/\s+/g,' ').trim();}
