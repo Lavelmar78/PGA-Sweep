@@ -857,7 +857,17 @@ async function showDebug(){
         out+="status.thru: "+s.thru+"\n";
         out+="status.type: "+(s.type&&s.type.name)+"\n";
         out+="status.position: "+JSON.stringify(s.position)+"\n";
-        out+="linescores: "+JSON.stringify((c.linescores||[]).map(function(l){return {v:l.value,dv:l.displayValue};}))+"\n";
+        var ls=c.linescores||[];
+        out+="linescores raw: "+JSON.stringify(ls.map(function(l){return {value:l.value,displayValue:l.displayValue,type:l.type};}))+"\n";
+        // Simulate what parser does
+        var pr1="",pr2="",pthru="";
+        for(var ri2=0;ri2<ls.length;ri2++){
+          var lv2=ls[ri2].value||0, ldv2=ls[ri2].displayValue||"";
+          if(lv2>18){if(ri2===0)pr1=String(lv2);else if(ri2===1)pr2=String(lv2);pthru="F";}
+          else if(lv2>0){pthru=String(lv2);if(ri2===0)pr1=ldv2;else if(ri2===1)pr2=ldv2;}
+          else if(ldv2&&ldv2!=="-"){if(ri2===0)pr1=ldv2;else if(ri2===1)pr2=ldv2;pthru="F";}
+        }
+        out+="parsed -> r1:"+pr1+" r2:"+pr2+" thru:"+pthru+"\n";
         out+="\n";
       });
       if(events.length)break;
