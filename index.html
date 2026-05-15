@@ -451,30 +451,48 @@ function parseESPN(d){
       var score=(c.score||"").trim();
       if(score==="0")score="E";
 
-      // Linescores — from debug: v=holes played (mid-round) OR round strokes (finished)
-      // dv=score to par for that round
-      // Round 1 in progress: ls[0].v = holes completed, ls[0].dv = current score to par
-      // Round 1 finished: ls[0].v = total strokes (e.g. 68), ls[0].dv = round score to par
+      // Linescores: each entry is one round.
+      // A finished round has v > 18 (stroke total e.g. 68) and dv = to-par e.g. "-2"
+      // An in-progress round has v <= 18 (holes completed) and dv = current to-par
+      // A not-started round has v = 0 or missing
       var ls=c.linescores||[];
-      var ls0=ls[0]||{}, ls1=ls[1]||{}, ls2=ls[2]||{}, ls3=ls[3]||{};
 
-      // Thru holes: during R1 ls[0].v is holes played if < 19, else it's stroke total
-      var thruVal=ls0.v||0;
-      var thru=thruVal>0&&thruVal<=18?String(thruVal):(ls0.dv&&ls0.dv!=="-"?"F":"");
+      var r1="",r2="",r3="",r4="",thru="",currentRound=0;
+      for(var ri=0;ri<ls.length;ri++){
+        var lv=ls[ri].v||0, ldv=ls[ri].dv||"";
+        if(lv>18){
+          // Completed round — store stroke total
+          if(ri===0)r1=String(lv);
+          else if(ri===1)r2=String(lv);
+          else if(ri===2)r3=String(lv);
+          else if(ri===3)r4=String(lv);
+          currentRound=ri+1;
+          thru="F";
+        } else if(lv>0){
+          // In-progress round — store holes played as thru
+          thru=String(lv);
+          currentRound=ri+1;
+        } else if(ldv&&ldv!=="-"&&ldv!=="E"&&lv===0){
+          // Some APIs send dv only for finished rounds with v=0 — treat as finished
+          if(ri===0)r1=ldv;
+          else if(ri===1)r2=ldv;
+          else if(ri===2)r3=ldv;
+          else if(ri===3)r4=ldv;
+          currentRound=ri+1;
+          thru="F";
+        }
+      }
+      // If all rounds show F but player is still active, thru stays "F" (correct)
 
-      // Round stroke totals — only valid when round is complete (value > 18)
-      var r1=ls0.v&&ls0.v>18?String(ls0.v):"";
-      var r2=ls1.v&&ls1.v>18?String(ls1.v):"";
-      var r3=ls2.v&&ls2.v>18?String(ls2.v):"";
-      var r4=ls3.v&&ls3.v>18?String(ls3.v):"";
+      // For display: show to-par per round when stroke total not available
+      if(!r1&&ls[0]&&ls[0].dv)r1=ls[0].dv;
+      if(!r2&&ls[1]&&ls[1].dv)r2=ls[1].dv;
+      if(!r3&&ls[2]&&ls[2].dv)r3=ls[2].dv;
+      if(!r4&&ls[3]&&ls[3].dv)r4=ls[3].dv;
 
-      // Round to-par display values
-      var r1dv=ls0.dv||"", r2dv=ls1.dv||"", r3dv=ls2.dv||"", r4dv=ls3.dv||"";
-
-      // Best round for tiebreaker — lowest stroke total across completed rounds
+      // Best round tiebreaker — lowest stroke total
       var rNums=[r1,r2,r3,r4].map(Number).filter(function(n){return n>60&&n<90;});
 
-      // CUT/WD detection — score will be "CUT" or "WD" or similar
       var cut=score==="CUT"||(c.status&&c.status.type&&c.status.type.name==="CUT");
       var wd=score==="WD"||score==="DQ"||(c.status&&c.status.type&&c.status.type.name==="WD");
 
@@ -483,7 +501,7 @@ function parseESPN(d){
         score:score,
         scoreNum:parseScore(score),
         thru:thru,
-        r1:r1||r1dv, r2:r2||r2dv, r3:r3||r3dv, r4:r4||r4dv,
+        r1:r1, r2:r2, r3:r3, r4:r4,
         cut:cut, wd:wd,
         br:rNums.length?Math.min.apply(null,rNums):null
       });
