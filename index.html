@@ -460,22 +460,27 @@ function parseESPN(d){
 
       var r1="",r2="",r3="",r4="",thru="";
       var lastDone=-1, inProg=-1;
+      // stroke totals only for tiebreaker — display always uses displayValue (to-par)
+      var s1=0,s2=0,s3=0,s4=0;
       for(var ri=0;ri<ls.length;ri++){
         var lv=ls[ri].value||0;
         var ldv=ls[ri].displayValue||"";
         if(lv>18){
-          if(ri===0)r1=String(lv);
-          else if(ri===1)r2=String(lv);
-          else if(ri===2)r3=String(lv);
-          else if(ri===3)r4=String(lv);
+          // Completed round: store stroke total for tiebreaker, dv for display
+          if(ri===0){s1=lv;r1=ldv||String(lv);}
+          else if(ri===1){s2=lv;r2=ldv||String(lv);}
+          else if(ri===2){s3=lv;r3=ldv||String(lv);}
+          else if(ri===3){s4=lv;r4=ldv||String(lv);}
           lastDone=ri;
         } else if(lv>0){
+          // In-progress: holes played, show to-par
           inProg=ri;
           if(ri===0)r1=ldv;
           else if(ri===1)r2=ldv;
           else if(ri===2)r3=ldv;
           else if(ri===3)r4=ldv;
         } else if(ldv&&ldv!=="-"&&lv===0){
+          // Finished with no stroke value
           if(ri===0)r1=ldv;
           else if(ri===1)r2=ldv;
           else if(ri===2)r3=ldv;
@@ -494,7 +499,7 @@ function parseESPN(d){
         thru="0";
       }
       // Best round tiebreaker — lowest stroke total from completed rounds
-      var rNums=[r1,r2,r3,r4].map(Number).filter(function(n){return n>60&&n<90;});
+      var rNums=[s1,s2,s3,s4].filter(function(n){return n>60&&n<90;});
 
       var cut=score==="CUT"||(c.status&&c.status.type&&c.status.type.name==="CUT");
       var wd=score==="WD"||score==="DQ"||(c.status&&c.status.type&&c.status.type.name==="WD");
