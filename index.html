@@ -120,7 +120,7 @@ input:focus,select:focus,textarea:focus{border-color:#2d8a47}
 <header>
   <div class="hdr-left">
     <div class="hdr-title">PGA Sweep</div>
-    <div class="hdr-sub">2026 Championship</div>
+    <div class="hdr-sub">2026 Championship &nbsp;|&nbsp; 1978 Classic #2</div>
   </div>
   <div class="live-badge" onclick="doRefresh(true)">
     <span class="dot stale" id="ldot"></span>
@@ -459,36 +459,40 @@ function parseESPN(d){
       var ls=c.linescores||[];
 
       var r1="",r2="",r3="",r4="",thru="";
+      var lastDone=-1, inProg=-1;
       for(var ri=0;ri<ls.length;ri++){
-        var lv=ls[ri].value||0;       // numeric: stroke total (>18) or holes played (<=18)
-        var ldv=ls[ri].displayValue||""; // string: to-par e.g. "-2", "E"
+        var lv=ls[ri].value||0;
+        var ldv=ls[ri].displayValue||"";
         if(lv>18){
-          // Completed round — v is stroke total
           if(ri===0)r1=String(lv);
           else if(ri===1)r2=String(lv);
           else if(ri===2)r3=String(lv);
           else if(ri===3)r4=String(lv);
-          thru="F";
+          lastDone=ri;
         } else if(lv>0){
-          // In-progress round — v is holes completed
-          thru=String(lv);
-          // Show to-par for the in-progress round
+          inProg=ri;
           if(ri===0)r1=ldv;
           else if(ri===1)r2=ldv;
           else if(ri===2)r3=ldv;
           else if(ri===3)r4=ldv;
         } else if(ldv&&ldv!=="-"&&lv===0){
-          // No value but has displayValue — finished round reported differently
           if(ri===0)r1=ldv;
           else if(ri===1)r2=ldv;
           else if(ri===2)r3=ldv;
           else if(ri===3)r4=ldv;
-          thru="F";
+          lastDone=ri;
         }
       }
-
-      // If thru still empty, player has not started their current round
-      if(!thru)thru="0";
+      if(inProg>=0){
+        thru=String(ls[inProg].value||0);
+      } else if(lastDone>=0){
+        // Check if a subsequent round entry exists but hasn't started (value=0, dv="-")
+        var nxt=ls[lastDone+1];
+        if(nxt&&(nxt.value===0||!nxt.value))thru="0";
+        else thru="F";
+      } else {
+        thru="0";
+      }
       // Best round tiebreaker — lowest stroke total from completed rounds
       var rNums=[r1,r2,r3,r4].map(Number).filter(function(n){return n>60&&n<90;});
 
