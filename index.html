@@ -487,6 +487,8 @@ function parseESPN(d){
         }
       }
 
+      // If thru still empty, player has not started their current round
+      if(!thru)thru="0";
       // Best round tiebreaker — lowest stroke total from completed rounds
       var rNums=[r1,r2,r3,r4].map(Number).filter(function(n){return n>60&&n<90;});
 
