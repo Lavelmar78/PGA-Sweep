@@ -861,7 +861,12 @@ async function showDebug(){
       var co=ev.competitions&&ev.competitions[0];
       if(!co){out+="No competition\n\n";continue;}
       out+="Competitors: "+(co.competitors||[]).length+"\n\n";
-      (co.competitors||[]).slice(0,3).forEach(function(c,ci){
+      // Find Fleetwood specifically + show players around position 50
+      var comps=co.competitors||[];
+      var toShow=comps.slice(0,3).concat(comps.filter(function(c){
+        return (c.athlete&&c.athlete.displayName&&c.athlete.displayName.indexOf("Fleetwood")>=0);
+      }));
+      toShow.forEach(function(c,ci){
         out+="--- Player "+ci+" ---\n";
         out+="name: "+((c.athlete&&c.athlete.displayName)||"?")+("\n");
         out+="score: "+c.score+"\n";
@@ -884,7 +889,7 @@ async function showDebug(){
         out+="parsed -> r1:"+pr1+" r2:"+pr2+" thru:"+pthru+"\n";
         out+="\n";
       });
-      if(events.length)break;
+      if(events.length&&comps.length)break;
     }catch(e){out+="ERROR: "+e+"\n\n";}
   }
   el.value=out;
