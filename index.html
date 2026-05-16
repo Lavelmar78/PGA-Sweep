@@ -1,5 +1,4 @@
 <!DOCTYPE html>
-
 <html lang="en" style="background:#faf7f0">
 <head>
 <meta charset="UTF-8">
@@ -138,7 +137,6 @@ input:focus,select:focus,textarea:focus{border-color:#2d8a47}
 <main>
 
 <!-- LEADERBOARD -->
-
 <div id="panel-leaderboard" class="panel active">
   <div class="t-banner">
     <div>
@@ -170,7 +168,6 @@ input:focus,select:focus,textarea:focus{border-color:#2d8a47}
 </div>
 
 <!-- TOURNAMENT SCORES -->
-
 <div id="panel-golf" class="panel">
   <div class="sec-row"><div class="sec-ttl">Official Leaderboard</div></div>
   <div class="glb-wrap">
@@ -188,7 +185,6 @@ input:focus,select:focus,textarea:focus{border-color:#2d8a47}
 </div>
 
 <!-- MANAGE ENTRIES -->
-
 <div id="panel-admin" class="panel">
   <div class="sec-row"><div class="sec-ttl">Manage Entries</div></div>
   <div class="fcard">
@@ -213,7 +209,6 @@ input:focus,select:focus,textarea:focus{border-color:#2d8a47}
 </div>
 
 <!-- SETTINGS -->
-
 <div id="panel-settings" class="panel">
   <div class="sec-row"><div class="sec-ttl">Settings</div></div>
   <div class="sgrid">
@@ -264,7 +259,6 @@ input:focus,select:focus,textarea:focus{border-color:#2d8a47}
 </main>
 
 <!-- Edit Modal -->
-
 <div class="mov" id="emod">
   <div class="mod">
     <h2>Edit Entry</h2>
@@ -282,7 +276,6 @@ input:focus,select:focus,textarea:focus{border-color:#2d8a47}
 </div>
 
 <!-- Share Modal -->
-
 <div class="mov" id="smod">
   <div class="mod" style="max-width:540px">
     <h2>&#128226; Share Standings</h2>
@@ -296,7 +289,6 @@ input:focus,select:focus,textarea:focus{border-color:#2d8a47}
 </div>
 
 <!-- Export Modal -->
-
 <div class="mov" id="xmod">
   <div class="mod" style="max-width:540px">
     <h2>Export Data</h2>
@@ -515,18 +507,29 @@ function parseESPN(d){
       });
     });
 
-    // Sort by score to par — this IS the leaderboard position
-    f.sort(function(a,b){return a.scoreNum-b.scoreNum;});
+    // Sort: active players by score first, then CUT, then WD
+    f.sort(function(a,b){
+      var aOut=(a.cut||a.wd)?1:0, bOut=(b.cut||b.wd)?1:0;
+      if(aOut!==bOut)return aOut-bOut; // active always above cut/wd
+      if(a.cut&&b.wd)return -1;        // CUT above WD
+      if(a.wd&&b.cut)return 1;
+      return a.scoreNum-b.scoreNum;    // within each group, sort by score
+    });
 
-    // Assign positions after sorting (handles ties with T prefix)
-    var rank=1;
+    // Assign positions — only active players get numbered positions
+    var rank=1, activeCount=0;
     for(var i=0;i<f.length;i++){
-      if(f[i].cut||f[i].wd){f[i].pos="CUT";f[i].posNum=500+i;continue;}
-      if(i>0&&f[i].scoreNum===f[i-1].scoreNum){
+      if(f[i].cut||f[i].wd){
+        f[i].pos=f[i].wd?"WD":"CUT";
+        f[i].posNum=500+i;
+        continue;
+      }
+      activeCount++;
+      if(i>0&&!f[i-1].cut&&!f[i-1].wd&&f[i].scoreNum===f[i-1].scoreNum){
         f[i].pos="T"+rank;
-        f[i-1].pos=f[i-1].pos.indexOf("T")===0?f[i-1].pos:"T"+rank;
+        if(f[i-1].pos===String(rank))f[i-1].pos="T"+rank;
       } else {
-        rank=i+1;
+        rank=activeCount;
         f[i].pos=String(rank);
       }
       f[i].posNum=rank;
@@ -894,6 +897,5 @@ function cpyDbg(){
 load();renderAll();doRefresh(false);
 setInterval(function(){var h=new Date().getHours();if(h>=8&&h<=22)doRefresh(false);},3*60*1000);
 </script>
-
 </body>
 </html>
