@@ -493,8 +493,13 @@ function parseESPN(d){
       // Best round tiebreaker — lowest stroke total from completed rounds
       var rNums=[s1,s2,s3,s4].filter(function(n){return n>60&&n<90;});
 
-      var cut=score==="CUT"||(c.status&&c.status.type&&c.status.type.name==="CUT");
-      var wd=score==="WD"||score==="DQ"||(c.status&&c.status.type&&c.status.type.name==="WD");
+      var wd=score==="WD"||score==="DQ";
+      // Cut detection: cut players have only completed rounds, no trailing empty entry
+      // Active/not-yet-started players always have a trailing {} in linescores
+      var lastLS=ls[ls.length-1];
+      var hasTrailingEmpty=lastLS&&!lastLS.value&&!lastLS.displayValue;
+      var allDone=ls.length>0&&ls.every(function(l){return l.value>18;});
+      var cut=!wd&&!hasTrailingEmpty&&allDone;
 
       f.push({
         name:name,
