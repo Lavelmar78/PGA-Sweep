@@ -435,6 +435,7 @@ function parseESPN(d){
     })||events[0];
     if(!ev)return f;
     var co=ev.competitions&&ev.competitions[0];if(!co)return f;
+    var currentPeriod=(co.status&&co.status.period)||1;
 
     (co.competitors||[]).forEach(function(c){
       var name=(c.athlete&&(c.athlete.displayName||c.athlete.fullName))||"?";
@@ -494,12 +495,9 @@ function parseESPN(d){
       var rNums=[s1,s2,s3,s4].filter(function(n){return n>60&&n<90;});
 
       var wd=score==="WD"||score==="DQ";
-      // Cut detection: cut players have only completed rounds, no trailing empty entry
-      // Active/not-yet-started players always have a trailing {} in linescores
-      var lastLS=ls[ls.length-1];
-      var hasTrailingEmpty=lastLS&&!lastLS.value&&!lastLS.displayValue;
-      var allDone=ls.length>0&&ls.every(function(l){return l.value>18;});
-      var cut=!wd&&!hasTrailingEmpty&&allDone;
+      // Cut detection: cut players have fewer linescore entries than the current round.
+      // In R4, active players have 4 entries; cut players only have 2.
+      var cut=!wd&&ls.length<currentPeriod;
 
       f.push({
         name:name,
