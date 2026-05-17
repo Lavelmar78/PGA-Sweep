@@ -865,7 +865,11 @@ async function showDebug(){
       out+="Event name: "+ev.name+"\n";
       var co=ev.competitions&&ev.competitions[0];
       if(!co){out+="No competition\n\n";continue;}
-      out+="Competitors: "+(co.competitors||[]).length+"\n\n";
+      out+="Competitors: "+(co.competitors||[]).length+"\n";
+      out+="comp.status: "+JSON.stringify(co.status)+"\n";
+      out+="comp.type: "+JSON.stringify(co.type)+"\n";
+      out+="comp.situation: "+JSON.stringify(co.situation)+"\n";
+      out+="\n";
       // Find Fleetwood specifically + show players around position 50
       var comps=co.competitors||[];
       var toShow=comps.slice(0,3).concat(comps.filter(function(c){
