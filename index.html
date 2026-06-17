@@ -255,7 +255,7 @@ input:focus,select:focus,textarea:focus{border-color:#2d8a47}
       <div class="frow"><label>Venue / Dates</label><input type="text" id="sv" value="Shinnecock Hills Golf Club · June 18–21"></div>
       <div class="frow">
         <label>ESPN Event ID</label>
-        <input type="text" id="se" value="401811948">
+        <input type="text" id="se" value="401811947">
         <div class="fhint">Update once the ESPN leaderboard URL is live.</div>
       </div>
       <div class="frow">
@@ -434,7 +434,7 @@ var FIELD=[
 var ENT=[],LIVE=[],SET={
   tournamentName:"US Open 2026",
   venue:"Shinnecock Hills Golf Club \u00b7 June 18\u201321",
-  espnEventId:"401811948",
+  espnEventId:"401811947",
   adminPassword:"sweep2026"
 };
 var adminUnlocked=false;
@@ -449,7 +449,7 @@ function load(){
 function applyS(){
   document.getElementById("sn").value=SET.tournamentName;
   document.getElementById("sv").value=SET.venue;
-  document.getElementById("se").value=SET.espnEventId||"401811948";
+  document.getElementById("se").value=SET.espnEventId||"401811947";
   document.getElementById("bn").textContent=SET.tournamentName;
   document.getElementById("bm").textContent=SET.venue;
   document.getElementById("gt").textContent=SET.tournamentName;
@@ -531,7 +531,7 @@ function renderSettingsPanel(){
 
 // ── ESPN ──────────────────────────────────────────────────────
 async function fetchLive(){
-  var id=SET.espnEventId||"401811948";
+  var id=SET.espnEventId||"401811947";
   var urls=[
     "https://site.web.api.espn.com/apis/site/v2/sports/golf/pga/scoreboard?event="+id+"&lang=en&region=gb",
     "https://site.api.espn.com/apis/site/v2/sports/golf/pga/scoreboard?event="+id,
@@ -558,7 +558,7 @@ function parseESPN(d){
   var f=[];
   try{
     var events=d.events||[];
-    var ev=events.find(function(e){return (e.name||"").toLowerCase().includes("u.s. open")||(e.name||"").toLowerCase().includes("us open");});
+    var ev=events.find(function(e){var n=(e.name||"").toLowerCase();return n.includes("u.s. open")||n.includes("us open")||n.includes("pga championship");});
     if(!ev)ev=events[0];
     if(!ev)return f;
     var co=ev.competitions&&ev.competitions[0];if(!co)return f;
@@ -809,12 +809,24 @@ function pRender(id,q){
   LIVE.forEach(function(p){if(!FIELD.find(function(f){return f.n===p.name;}))src.push({n:p.name,c:"Live"});});
   var matches=ql?src.filter(function(p){return p.n.toLowerCase().includes(ql);}):src;
   if(!matches.length){list.innerHTML="<div class=\"pke\">No players found</div>";PKI[id]=-1;return;}
-  list.innerHTML=matches.slice(0,60).map(function(p){
+  var frag=document.createDocumentFragment();
+  matches.slice(0,60).forEach(function(p){
     var ld=LIVE.find(function(l){return l.name===p.n;});
     var ps=ld?" \u00b7 "+ld.pos:"";
-    return "<div class=\"pki\" data-name=\""+p.n+"\" onmousedown=\"psel(event,\\'"+id+"\\')\">"
-      +"<span>"+esc(p.n)+ps+"</span><span class=\"pkc\">"+p.c+"</span></div>";
-  }).join("");
+    var div=document.createElement("div");
+    div.className="pki";
+    div.innerHTML="<span>"+esc(p.n)+ps+"</span><span class=\"pkc\">"+p.c+"</span>";
+    div.addEventListener("mousedown",function(ev){
+      ev.preventDefault();
+      var drop=document.getElementById(id);
+      var inp=drop?drop.previousElementSibling:null;
+      if(inp)inp.value=p.n;
+      if(drop)drop.classList.remove("open");
+    });
+    frag.appendChild(div);
+  });
+  list.innerHTML="";
+  list.appendChild(frag);
   PKI[id]=-1;
 }
 function po(id,inp){
@@ -824,14 +836,7 @@ function po(id,inp){
   list.classList.add("open");
 }
 function pf(inp,id){pRender(id,inp.value);document.getElementById(id).classList.add("open");}
-function psel(ev,id){
-  ev.preventDefault();
-  var name=ev.currentTarget.dataset.name;
-  var list=document.getElementById(id);
-  var inp=list.previousElementSibling;
-  if(inp)inp.value=name;
-  list.classList.remove("open");
-}
+// psel replaced by inline addEventListener in pRender
 function pk(ev,id,inp){
   var list=document.getElementById(id);
   if(!list.classList.contains("open")){if(ev.key==="ArrowDown"||ev.key==="Enter"){po(id,inp);}return;}
@@ -923,7 +928,7 @@ async function showDebug(){
   var el=document.getElementById("dbgtxt");
   el.value="Fetching...";
   document.getElementById("dbgmod").classList.add("open");
-  var id=SET.espnEventId||"401811948";
+  var id=SET.espnEventId||"401811947";
   var urls=[
     "https://site.web.api.espn.com/apis/site/v2/sports/golf/pga/scoreboard?event="+id+"&lang=en&region=gb",
     "https://site.api.espn.com/apis/site/v2/sports/golf/pga/scoreboard?event="+id
