@@ -806,7 +806,7 @@ function pRender(id,q){
   var list=document.getElementById(id);if(!list)return;
   var ql=q.trim().toLowerCase();
   var src=FIELD.slice();
-  LIVE.forEach(function(p){if(!FIELD.find(function(f){return f.n===p.name;}))src.push({n:p.name,c:"Live"});});
+  LIVE.forEach(function(p){if(!FIELD.find(function(f){return nm(f.n)===nm(p.name);}))src.push({n:p.name,c:"Live"});});
   var matches=ql?src.filter(function(p){return p.n.toLowerCase().includes(ql);}):src;
   if(!matches.length){list.innerHTML="<div class=\"pke\">No players found</div>";PKI[id]=-1;return;}
   var frag=document.createDocumentFragment();
