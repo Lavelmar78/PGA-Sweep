@@ -167,6 +167,10 @@ input:focus,select:focus,textarea:focus{border-color:#2d8a47}
     </table>
   </div>
   <div id="lu">Scores not yet loaded</div>
+  <div style="text-align:center;margin-top:.75rem">
+    <button class="btn bs" onclick="document.getElementById('impf-pub').click()" style="font-size:.62rem">&#8593; Import JSON</button>
+    <input type="file" id="impf-pub" accept=".json" style="display:none" onchange="impD(event)">
+  </div>
 </div>
 
 <!-- TOURNAMENT SCORES -->
