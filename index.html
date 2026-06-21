@@ -966,7 +966,7 @@ async function showDebug(){
         out+="name: "+((c.athlete&&c.athlete.displayName)||"?")+"\n";
         out+="score: "+c.score+"\n";
         var ls=c.linescores||[];
-        out+="linescores: "+JSON.stringify(ls.map(function(l){return {value:l.value,displayValue:l.displayValue};}))+"\n\n";
+        out+="linescores: "+JSON.stringify(ls.map(function(l){return {value:l.value,displayValue:l.displayValue,period:l.period,linescores:l.linescores};}))+"\n\n";
       });
       if(events.length)break;
     }catch(e){out+="ERROR: "+e+"\n\n";}
