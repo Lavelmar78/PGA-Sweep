@@ -603,7 +603,7 @@ function parseESPN(d){
         r1:r1,r2:r2,r3:r3,r4:r4,cut:cut,wd:wd,br:rNums.length?Math.min.apply(null,rNums):null});
     });
 
-    // Sort: active by score, then CUT, then WD
+    // Sort: active players by score first, then CUT, then WD (within each group, by score)
     f.sort(function(a,b){
       var aOut=(a.cut||a.wd)?1:0,bOut=(b.cut||b.wd)?1:0;
       if(aOut!==bOut)return aOut-bOut;
@@ -611,14 +611,17 @@ function parseESPN(d){
       return a.scoreNum-b.scoreNum;
     });
 
-    // Assign positions
-    var rank=1,ac=0;
+    // Assign positions to EVERYONE including cut/WD players — they get their real
+    // finishing position in the full field, just tagged with CUT/WD for display.
+    var rank=1;
     for(var i=0;i<f.length;i++){
-      if(f[i].cut||f[i].wd){f[i].pos=f[i].wd?"WD":"CUT";f[i].posNum=500+i;continue;}
-      ac++;
-      if(i>0&&!f[i-1].cut&&!f[i-1].wd&&f[i].scoreNum===f[i-1].scoreNum){
-        f[i].pos="T"+rank;if(f[i-1].pos===String(rank))f[i-1].pos="T"+rank;
-      } else {rank=ac;f[i].pos=String(rank);}
+      if(i>0&&f[i].scoreNum===f[i-1].scoreNum&&!(f[i].wd&&!f[i-1].wd)){
+        f[i].pos="T"+rank;
+        if(f[i-1].pos===String(rank))f[i-1].pos="T"+rank;
+      } else {
+        rank=i+1;
+        f[i].pos=String(rank);
+      }
       f[i].posNum=rank;
     }
   }catch(e){console.warn("ESPN parse error:",e);}
@@ -706,7 +709,7 @@ function rSweep(){
       tags=r.gs.map(function(g){
         var d=g.data;
         if(!d)return "<span class=\"gtag\">"+esc(g.name)+" <span class=\"gp\" style=\"color:#6b8070\">&mdash;</span></span>";
-        var p=(d.cut||d.wd)?"<span class=\"gp cut\">"+(d.cut?"CUT":"WD")+"</span>":"<span class=\"gp\">"+esc(d.pos)+"</span>";
+        var p=(d.cut||d.wd)?"<span class=\"gp cut\">"+esc(d.pos)+" "+(d.cut?"CUT":"WD")+"</span>":"<span class=\"gp\">"+esc(d.pos)+"</span>";
         return "<span class=\"gtag\">"+esc(d.name)+" "+p+"</span>";
       }).join("");
     } else {
