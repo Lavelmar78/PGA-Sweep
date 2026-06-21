@@ -958,7 +958,10 @@ async function showDebug(){
       out+="Competitors: "+(co.competitors||[]).length+"\n";
       out+="comp.status: "+JSON.stringify(co.status)+"\n\n";
       var comps=co.competitors||[];
-      comps.slice(0,3).forEach(function(c,ci){
+      var toShow=comps.slice(0,2).concat(comps.filter(function(c){
+        return (c.athlete&&c.athlete.displayName&&c.athlete.displayName.indexOf("Woodland")>=0);
+      }));
+      toShow.forEach(function(c,ci){
         out+="--- Player "+ci+" ---\n";
         out+="name: "+((c.athlete&&c.athlete.displayName)||"?")+"\n";
         out+="score: "+c.score+"\n";
