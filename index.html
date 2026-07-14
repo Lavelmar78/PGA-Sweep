@@ -428,11 +428,11 @@ const FIELD = [
 // ── STATE ──────────────────────────────────────────────────────
 let ENT = {};       // keyed by Firebase push ID
 let LIVE = [];
+const ADMIN_HASH = "cecb0ca118cf2fb096cb3f19177c69668ee2b8502e567cf0cec4e2744fec5088";
 let SET = {
   tournamentName: "The Open Championship 2026",
   venue: "Royal Birkdale \u00b7 July 17\u201320",
-  espnEventId: "401811949",
-  adminPassword: "sweep2026"
+  espnEventId: "401811949"
 };
 let adminUnlocked = false;
 let PKI = {};
@@ -454,7 +454,10 @@ onValue(entriesRef, (snapshot) => {
 // Listen for settings updates
 onValue(settingsRef, (snapshot) => {
   if (snapshot.val()) {
-    SET = Object.assign({}, SET, snapshot.val());
+    const s = snapshot.val();
+    // Never restore plaintext adminPassword from Firebase
+    delete s.adminPassword;
+    SET = Object.assign({}, SET, s);
     applyS();
   }
 });
@@ -490,8 +493,18 @@ function saveS() {
   SET.venue = document.getElementById("sv").value.trim();
   SET.espnEventId = document.getElementById("se").value.trim();
   const newpw = document.getElementById("spw").value.trim();
-  if (newpw) SET.adminPassword = newpw;
   document.getElementById("spw").value = "";
+  if (newpw) {
+    hashPw(newpw).then(h => {
+      SET.adminPasswordHash = h;
+      delete SET.adminPassword;
+      set(settingsRef, SET);
+      applyS();
+      toast("Settings saved");
+      doRefresh(true);
+    });
+    return;
+  }
   set(settingsRef, SET);
   applyS();
   toast("Settings saved");
@@ -520,32 +533,33 @@ function renderSettingsPanel() {
   document.getElementById("settings-content").style.display = adminUnlocked ? "block" : "none";
 }
 
-window.checkPw = function() {
-  const val = document.getElementById("pw-input").value;
-  if (val === SET.adminPassword) {
+async function hashPw(pw) {
+  const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(pw));
+  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,"0")).join("");
+}
+
+async function verifyPw(inputId, errId, onSuccess) {
+  const val = document.getElementById(inputId).value;
+  const h = await hashPw(val);
+  const stored = SET.adminPasswordHash || ADMIN_HASH;
+  if (h === stored) {
     adminUnlocked = true;
-    document.getElementById("pw-input").value = "";
-    document.getElementById("pw-err").textContent = "";
-    renderAdminPanel(); renderSettingsPanel();
+    document.getElementById(inputId).value = "";
+    document.getElementById(errId).textContent = "";
+    onSuccess();
   } else {
-    document.getElementById("pw-err").textContent = "Incorrect password.";
-    document.getElementById("pw-input").value = "";
-    document.getElementById("pw-input").focus();
+    document.getElementById(errId).textContent = "Incorrect password.";
+    document.getElementById(inputId).value = "";
+    document.getElementById(inputId).focus();
   }
+}
+
+window.checkPw = function() {
+  verifyPw("pw-input", "pw-err", () => { renderAdminPanel(); renderSettingsPanel(); });
 };
 
 window.checkPwS = function() {
-  const val = document.getElementById("pw-input-s").value;
-  if (val === SET.adminPassword) {
-    adminUnlocked = true;
-    document.getElementById("pw-input-s").value = "";
-    document.getElementById("pw-err-s").textContent = "";
-    renderAdminPanel(); renderSettingsPanel();
-  } else {
-    document.getElementById("pw-err-s").textContent = "Incorrect password.";
-    document.getElementById("pw-input-s").value = "";
-    document.getElementById("pw-input-s").focus();
-  }
+  verifyPw("pw-input-s", "pw-err-s", () => { renderAdminPanel(); renderSettingsPanel(); });
 };
 
 window.lockAdmin = function() {
