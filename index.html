@@ -107,12 +107,14 @@ input:focus,select:focus,textarea:focus{border-color:#2d8a47}
 .mact{display:flex;gap:.65rem;justify-content:flex-end;margin-top:1.25rem}
 .toast{position:fixed;bottom:1.25rem;right:1.25rem;background:#0f1a13 !important;color:#fff !important;font-family:'DM Mono',monospace;font-size:.72rem;padding:.7rem 1.1rem;border-radius:7px;border-left:3px solid #c9a84c;z-index:2000;transform:translateY(80px);opacity:0;transition:all .3s}
 .toast.show{transform:translateY(0);opacity:1}
-/* Password lock screen */
 .lock-screen{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:3rem 1.5rem;text-align:center}
 .lock-icon{font-size:2.5rem;margin-bottom:1rem;opacity:.4}
 .lock-screen p{font-size:.88rem;color:#6b8070;margin-bottom:1.25rem}
 .lock-row{display:flex;gap:.65rem;max-width:320px;width:100%}
 .lock-row input{flex:1}
+.sync-dot{display:inline-block;width:6px;height:6px;border-radius:50%;background:#4caf50;margin-right:4px;vertical-align:middle}
+.sync-dot.syncing{background:#c9a84c;animation:pulse 1s infinite}
+.sync-dot.err{background:#c0392b;animation:none}
 @media(max-width:500px){main{padding:1rem .75rem}header{padding:0 .9rem}th,td{padding:.5rem .45rem;font-size:.78rem}.sc{font-size:1.35rem}.rnk{font-size:1.2rem;width:36px}}
 </style>
 </head>
@@ -121,7 +123,7 @@ input:focus,select:focus,textarea:focus{border-color:#2d8a47}
 <header>
   <div class="hdr-left">
     <div class="hdr-title">1978 Classic Golf Sweep</div>
-    <div class="hdr-sub">US Open 2026</div>
+    <div class="hdr-sub">The Open 2026</div>
   </div>
   <div class="live-badge" onclick="doRefresh(true)">
     <span class="dot stale" id="ldot"></span>
@@ -142,14 +144,17 @@ input:focus,select:focus,textarea:focus{border-color:#2d8a47}
 <div id="panel-leaderboard" class="panel active">
   <div class="t-banner">
     <div>
-      <div class="t-name" id="bn">US Open 2026</div>
-      <div class="t-meta" id="bm">Shinnecock Hills Golf Club &middot; June 18&ndash;21</div>
+      <div class="t-name" id="bn">The Open Championship 2026</div>
+      <div class="t-meta" id="bm">Royal Birkdale &middot; July 17&ndash;20</div>
     </div>
     <div class="t-pill" id="bs">Loading&hellip;</div>
   </div>
   <div class="sec-row">
     <div class="sec-ttl">Sweep Standings</div>
-    <button class="btn bp" onclick="doShare()" style="padding:.45rem 1rem;font-size:.68rem;flex-shrink:0">&#128226; Share</button>
+    <div style="display:flex;gap:.5rem;align-items:center;flex-shrink:0">
+      <span id="sync-status" style="font-family:'DM Mono',monospace;font-size:.6rem;color:#6b8070"></span>
+      <button class="btn bp" onclick="doShare()" style="padding:.45rem 1rem;font-size:.68rem">&#128226; Share</button>
+    </div>
   </div>
   <div class="tbl-wrap">
     <table>
@@ -162,15 +167,11 @@ input:focus,select:focus,textarea:focus{border-color:#2d8a47}
         <th></th>
       </tr></thead>
       <tbody id="stb">
-        <tr><td colspan="6"><div class="empty-s"><div class="ico">&#9971;</div><p>No entries yet.<br><strong>Add some via Manage Entries.</strong></p></div></td></tr>
+        <tr><td colspan="6"><div class="empty-s"><div class="ico">&#9971;</div><p>Loading entries&hellip;</p></div></td></tr>
       </tbody>
     </table>
   </div>
   <div id="lu">Scores not yet loaded</div>
-  <div style="text-align:center;margin-top:.75rem">
-    <button class="btn bs" onclick="document.getElementById('impf-pub').click()" style="font-size:.62rem">&#8593; Import JSON</button>
-    <input type="file" id="impf-pub" accept=".json" style="display:none" onchange="impD(event)">
-  </div>
 </div>
 
 <!-- TOURNAMENT SCORES -->
@@ -178,7 +179,7 @@ input:focus,select:focus,textarea:focus{border-color:#2d8a47}
   <div class="sec-row"><div class="sec-ttl">Official Leaderboard</div></div>
   <div class="glb-wrap">
     <div class="glb-hd">
-      <strong id="gt">US Open 2026</strong>
+      <strong id="gt">The Open Championship 2026</strong>
       <span id="gm">Loading&hellip;</span>
     </div>
     <div style="overflow-x:auto">
@@ -190,9 +191,8 @@ input:focus,select:focus,textarea:focus{border-color:#2d8a47}
   </div>
 </div>
 
-<!-- MANAGE ENTRIES — password protected -->
+<!-- MANAGE ENTRIES -->
 <div id="panel-admin" class="panel">
-  <!-- Lock screen shown when not authenticated -->
   <div id="admin-lock">
     <div class="lock-screen">
       <div class="lock-icon">&#128274;</div>
@@ -204,7 +204,6 @@ input:focus,select:focus,textarea:focus{border-color:#2d8a47}
       <p id="pw-err" style="color:#c0392b;font-size:.78rem;margin-top:.5rem;min-height:1rem"></p>
     </div>
   </div>
-  <!-- Admin content shown after authentication -->
   <div id="admin-content" style="display:none">
     <div class="sec-row">
       <div class="sec-ttl">Manage Entries</div>
@@ -219,11 +218,11 @@ input:focus,select:focus,textarea:focus{border-color:#2d8a47}
           <div class="grow"><span class="gnum">2</span><div class="pkw"><input type="text" id="fg2" placeholder="Search player&hellip;" autocomplete="off" oninput="pf(this,'p1')" onfocus="po('p1',this)" onkeydown="pk(event,'p1',this)"><div class="pkd" id="p1"></div></div></div>
           <div class="grow"><span class="gnum">3</span><div class="pkw"><input type="text" id="fg3" placeholder="Search player&hellip;" autocomplete="off" oninput="pf(this,'p2')" onfocus="po('p2',this)" onkeydown="pk(event,'p2',this)"><div class="pkd" id="p2"></div></div></div>
         </div>
-        <div class="fhint">Type to search the confirmed field.</div>
+        <div class="fhint">Type to search the confirmed 156-player field.</div>
       </div>
       <div class="frow">
         <label>Winning Score Prediction (to par)</label>
-        <input type="number" id="fp" placeholder="e.g. -10" min="-40" max="20">
+        <input type="number" id="fp" placeholder="e.g. -15" min="-40" max="20">
         <div class="fhint">Final tiebreaker.</div>
       </div>
       <button class="btn bp" onclick="addE()">Add Entry</button>
@@ -234,7 +233,6 @@ input:focus,select:focus,textarea:focus{border-color:#2d8a47}
 
 <!-- SETTINGS -->
 <div id="panel-settings" class="panel">
-  <!-- Settings lock screen -->
   <div id="settings-lock">
     <div class="lock-screen">
       <div class="lock-icon">&#128274;</div>
@@ -246,50 +244,51 @@ input:focus,select:focus,textarea:focus{border-color:#2d8a47}
       <p id="pw-err-s" style="color:#c0392b;font-size:.78rem;margin-top:.5rem;min-height:1rem"></p>
     </div>
   </div>
-  <!-- Settings content -->
   <div id="settings-content" style="display:none">
-  <div class="sec-row">
-    <div class="sec-ttl">Settings</div>
-    <button class="btn bs" onclick="lockAdmin()">&#128274; Lock</button>
-  </div>
-  <div class="sgrid">
-    <div class="ssec">
-      <h3>Tournament</h3>
-      <div class="frow"><label>Tournament Name</label><input type="text" id="sn" value="US Open 2026"></div>
-      <div class="frow"><label>Venue / Dates</label><input type="text" id="sv" value="Shinnecock Hills Golf Club · June 18–21"></div>
-      <div class="frow">
-        <label>ESPN Event ID</label>
-        <input type="text" id="se" value="401811947">
-        <div class="fhint">Update once the ESPN leaderboard URL is live.</div>
-      </div>
-      <div class="frow">
-        <label>Admin Password</label>
-        <input type="password" id="spw" placeholder="Set new password">
-        <div class="fhint">Protects the Manage Entries panel.</div>
-      </div>
-      <button class="btn bp" onclick="saveS()">Save Settings</button>
+    <div class="sec-row">
+      <div class="sec-ttl">Settings</div>
+      <button class="btn bs" onclick="lockAdmin()">&#128274; Lock</button>
     </div>
-    <div class="ssec">
-      <h3>Rules</h3>
+    <div class="sgrid">
+      <div class="ssec">
+        <h3>Tournament</h3>
+        <div class="frow"><label>Tournament Name</label><input type="text" id="sn" value="The Open Championship 2026"></div>
+        <div class="frow"><label>Venue / Dates</label><input type="text" id="sv" value="Royal Birkdale · July 17–20"></div>
+        <div class="frow">
+          <label>ESPN Event ID</label>
+          <input type="text" id="se" value="401811949">
+          <div class="fhint">Update once ESPN leaderboard is live Thursday.</div>
+        </div>
+        <div class="frow">
+          <label>Admin Password</label>
+          <input type="password" id="spw" placeholder="Set new password">
+        </div>
+        <button class="btn bp" onclick="saveS()">Save Settings</button>
+      </div>
+      <div class="ssec">
+        <h3>Rules</h3>
+        <div class="ibox">
+          <strong>Scoring:</strong> Finishing position = score. Lowest total wins.<br><br>
+          <strong>Tiebreaker order:</strong><br>
+          1&#65039;&#8419; Highest-placed single golfer<br>
+          2&#65039;&#8419; Lowest individual round score<br>
+          3&#65039;&#8419; Closest winning score prediction
+        </div>
+      </div>
+    </div>
+    <div class="ssec" style="max-width:540px;margin-bottom:1.25rem">
+      <h3>Firebase Sync</h3>
       <div class="ibox">
-        <strong>Scoring:</strong> Finishing position = score. Lowest total wins.<br><br>
-        <strong>Tiebreaker order:</strong><br>
-        1&#65039;&#8419; Highest-placed single golfer<br>
-        2&#65039;&#8419; Lowest individual round score<br>
-        3&#65039;&#8419; Closest winning score prediction
+        <span class="sync-dot" id="fb-dot"></span>
+        <strong>Real-time sync active.</strong> All entries are stored in Firebase and update instantly across all devices. No import/export needed.<br><br>
+        Project: <strong>golfsweep</strong>
       </div>
+      <button class="btn bd" onclick="clrAll()">Clear All Entries</button>
     </div>
-  </div>
-  <div class="ssec" style="max-width:540px;margin-bottom:1.25rem">
-    <h3>Data</h3>
-    <div style="display:flex;gap:.65rem;flex-wrap:wrap;margin-bottom:.9rem">
-      <button class="btn bp" onclick="expD()">Export JSON</button>
-      <button class="btn bs" onclick="document.getElementById('impf').click()">Import JSON</button>
-      <input type="file" id="impf" accept=".json" style="display:none" onchange="impD(event)">
+    <div class="ssec" style="max-width:540px">
+      <h3>Debug</h3>
       <button class="btn bs" onclick="showDebug()">Debug ESPN</button>
-      <button class="btn bd" onclick="clrAll()">Clear All</button>
     </div>
-    <div class="wbox">All data lives in your browser. Export regularly to back up.</div>
   </div>
 </div>
 
@@ -325,19 +324,6 @@ input:focus,select:focus,textarea:focus{border-color:#2d8a47}
   </div>
 </div>
 
-<!-- Export Modal -->
-<div class="mov" id="xmod">
-  <div class="mod" style="max-width:540px">
-    <h2>Export Data</h2>
-    <p style="font-size:.8rem;color:#6b8070;margin-bottom:.75rem">Copy this JSON and keep it safe. Use Import to restore.</p>
-    <textarea id="xtxt" readonly style="width:100%;height:180px;font-family:'DM Mono',monospace;font-size:.68rem;padding:.7rem;border:1.5px solid #d4e4d8;border-radius:7px;background:#faf7f0;resize:vertical;color:#1c2e21"></textarea>
-    <div class="mact">
-      <button class="btn bs" onclick="clsMod('xmod')">Close</button>
-      <button class="btn bp" onclick="cpyExp()">Copy to Clipboard</button>
-    </div>
-  </div>
-</div>
-
 <!-- Debug Modal -->
 <div class="mov" id="dbgmod">
   <div class="mod" style="max-width:600px">
@@ -352,299 +338,332 @@ input:focus,select:focus,textarea:focus{border-color:#2d8a47}
 
 <div class="toast" id="tst"></div>
 
-<script>
-// ── FIELD ─────────────────────────────────────────────────────
-var FIELD=[
-  // Exempt — US Open champions
-  {n:"J.J. Spaun",c:"USA"},{n:"Bryson DeChambeau",c:"USA"},{n:"Wyndham Clark",c:"USA"},
-  {n:"Matt Fitzpatrick",c:"ENGLAND"},{n:"Jon Rahm",c:"SPAIN"},{n:"Gary Woodland",c:"USA"},
-  {n:"Brooks Koepka",c:"USA"},{n:"Dustin Johnson",c:"USA"},
-  // Top 10 2025 US Open
-  {n:"Robert MacIntyre",c:"SCOTLAND"},{n:"Viktor Hovland",c:"NORWAY"},{n:"Cameron Young",c:"USA"},
-  {n:"Tyrrell Hatton",c:"ENGLAND"},{n:"Carlos Ortiz",c:"MEXICO"},{n:"Sam Burns",c:"USA"},
-  {n:"Scottie Scheffler",c:"USA"},{n:"Ben Griffin",c:"USA"},{n:"Russell Henley",c:"USA"},
-  // Masters/PGA/Open champs
-  {n:"Rory McIlroy",c:"N. IRELAND"},{n:"Aaron Rai",c:"ENGLAND"},{n:"Xander Schauffele",c:"USA"},
-  {n:"Justin Thomas",c:"USA"},{n:"Brian Harman",c:"USA"},{n:"Cameron Smith",c:"AUSTRALIA"},
-  {n:"Collin Morikawa",c:"USA"},{n:"Alex Noren",c:"SWEDEN"},{n:"Padraig Harrington",c:"IRELAND"},
-  // 2025 Tour Championship
-  {n:"Tommy Fleetwood",c:"ENGLAND"},{n:"Patrick Cantlay",c:"USA"},{n:"Corey Conners",c:"CANADA"},
-  {n:"Keegan Bradley",c:"USA"},{n:"Chris Gotterup",c:"USA"},{n:"Akshay Bhatia",c:"USA"},
-  {n:"Harris English",c:"USA"},{n:"Shane Lowry",c:"IRELAND"},{n:"Harry Hall",c:"ENGLAND"},
-  {n:"Nick Taylor",c:"CANADA"},{n:"Ludvig Aberg",c:"SWEDEN"},{n:"Justin Rose",c:"ENGLAND"},
-  {n:"Maverick McNealy",c:"USA"},{n:"Andrew Novak",c:"USA"},{n:"Jacob Bridgeman",c:"USA"},
-  {n:"Sungjae Im",c:"SOUTH KOREA"},{n:"Hideki Matsuyama",c:"JAPAN"},{n:"Sepp Straka",c:"AUSTRIA"},
-  // FedExCup/Race to Dubai
-  {n:"Alex Fitzpatrick",c:"ENGLAND"},{n:"Sahith Theegala",c:"USA"},{n:"Sudarshan Yellamaraju",c:"USA"},
-  {n:"Patrick Rodgers",c:"USA"},{n:"Matti Schmid",c:"GERMANY"},{n:"Johnny Keefer",c:"USA"},
-  {n:"Laurie Canter",c:"ENGLAND"},{n:"Adrien Saddier",c:"FRANCE"},{n:"Jayden Schaper",c:"SOUTH AFRICA"},
-  // Top 60 OWGR additions
-  {n:"Patrick Reed",c:"USA"},{n:"Si Woo Kim",c:"SOUTH KOREA"},{n:"Kristoffer Reitan",c:"NORWAY"},
-  {n:"Nicolai Hojgaard",c:"DENMARK"},{n:"Kurt Kitayama",c:"USA"},{n:"Min Woo Lee",c:"AUSTRALIA"},
-  {n:"Ryan Gerard",c:"USA"},{n:"Rickie Fowler",c:"USA"},{n:"Jake Knapp",c:"USA"},
-  {n:"Jason Day",c:"AUSTRALIA"},{n:"Alex Smalley",c:"USA"},{n:"Daniel Berger",c:"USA"},
-  {n:"Michael Kim",c:"USA"},{n:"Matt McCarty",c:"USA"},{n:"Jordan Spieth",c:"USA"},
-  {n:"Adam Scott",c:"AUSTRALIA"},{n:"Nico Echavarria",c:"COLOMBIA"},{n:"Sam Stevens",c:"USA"},
-  {n:"Ryan Fox",c:"NEW ZEALAND"},{n:"Michael Brennan",c:"USA"},{n:"Pierceson Coody",c:"USA"},
-  {n:"David Puig",c:"SPAIN"},{n:"Ryo Hisatsune",c:"JAPAN"},
-  // Canadian Open winner + late OWGR additions
-  {n:"Bud Cauley",c:"USA"},{n:"J.T. Poston",c:"USA"},
-  // Replaced Marco Penge (withdrew)
-  {n:"Chandler Phillips",c:"USA"},
-  // LIV exemptions
-  {n:"Joaquin Niemann",c:"CHILE"},{n:"Lucas Herbert",c:"AUSTRALIA"},
-  // Amateurs
-  {n:"Mason Howell",c:"USA"},{n:"Jackson Herrington",c:"USA"},{n:"Hamilton Coleman",c:"USA"},
-  {n:"Brandon Holtz",c:"USA"},{n:"Ethan Fang",c:"USA"},{n:"Jackson Koivun",c:"USA"},
-  {n:"Preston Stout",c:"USA"},{n:"Mateo Pulcini",c:"ARGENTINA"},
-  // Final qualifying — England
-  {n:"Nathan Kimsey",c:"ENGLAND"},{n:"Rocco Repetto Taylor",c:"SPAIN"},{n:"Filippo Celli",c:"ITALY"},
-  {n:"Matthew Jordan",c:"ENGLAND"},{n:"Angel Hidalgo",c:"SPAIN"},{n:"Niklas Norgaard",c:"DENMARK"},
-  {n:"Ugo Coussaud",c:"FRANCE"},
-  // Final qualifying — Japan
-  {n:"Ryuichi Oiwa",c:"JAPAN"},{n:"Kaito Onishi",c:"JAPAN"},{n:"Taihei Sato",c:"JAPAN"},
-  // Final qualifying — Dallas
-  {n:"Peter Uihlein",c:"USA"},{n:"Tom Kim",c:"SOUTH KOREA"},{n:"Cooper Dossey",c:"USA"},
-  {n:"Manav Shah",c:"USA"},{n:"Jimmy Stanger",c:"USA"},{n:"Graeme McDowell",c:"N. IRELAND"},
-  {n:"Adrien Dumont de Chassart",c:"BELGIUM"},{n:"T.K. Kim",c:"USA"},{n:"Caleb Surratt",c:"USA"},
-  // Final qualifying — US Golf's Longest Day
-  {n:"Chris Kirk",c:"USA"},{n:"Jake Peacock",c:"USA"},{n:"Keith Mitchell",c:"USA"},
-  {n:"Robbie Higgins",c:"USA"},{n:"Chase Kyes",c:"USA"},
-  {n:"Giuseppe Puebla",c:"CHILE"},{n:"Ben Silverman",c:"CANADA"},{n:"Ryder Cowan",c:"USA"},
-  {n:"Miles Russell",c:"USA"},
-  {n:"Kevin Roy",c:"USA"},{n:"Max Greyserman",c:"USA"},{n:"Ben James",c:"USA"},{n:"James Nicholas",c:"USA"},
-  {n:"Jackson Ormond",c:"USA"},{n:"Carl Yuan",c:"USA"},{n:"Jackson Van Paris",c:"USA"},
-  {n:"Brandon Wu",c:"USA"},{n:"Cole Hammer",c:"USA"},
-  {n:"Jackson Suber",c:"USA"},{n:"Ben Kohles",c:"USA"},{n:"Logan Reilly",c:"USA"},{n:"Jake Sollon",c:"USA"},
-  {n:"Neal Shipley",c:"USA"},{n:"Zac Blair",c:"USA"},{n:"Dylan Wu",c:"USA"},
-  {n:"Billy Horschel",c:"USA"},{n:"Nick Hardy",c:"USA"},
-  {n:"Davis Thompson",c:"USA"},{n:"J.B. Holmes",c:"USA"},{n:"Vaughn Harber",c:"USA"},
-  {n:"Arni Sveinsson",c:"ICELAND"},
-  // Lambton Canada
-  {n:"Emiliano Grillo",c:"ARGENTINA"},{n:"Alejandro Tosti",c:"ARGENTINA"},{n:"Marcelo Rozo",c:"COLOMBIA"},
-  {n:"William Mouw",c:"USA"},{n:"John Parry",c:"ENGLAND"},{n:"Max McGreevy",c:"USA"},
-  // Del Paso Sacramento
-  {n:"Taylor Montgomery",c:"USA"},{n:"Eric Lee",c:"USA"},{n:"Matthew Robles",c:"USA"},
-  {n:"Marek Fleming",c:"USA"},
-  // Oregon
-  {n:"Greyson Leach",c:"USA"},{n:"Andrew Putnam",c:"USA"},
-  // Local qualifying
-  {n:"T.K. Kim",c:"USA"},{n:"Jake Sollon",c:"USA"},{n:"Jackson Van Paris",c:"USA"},
-  {n:"Greyson Leach",c:"USA"},
+<!-- Firebase SDK -->
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
+import { getDatabase, ref, set, push, remove, onValue, update }
+  from "https://www.gstatic.com/firebasejs/11.0.1/firebase-database.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyCIZkWrmmHsJLZDEbJV9i1opWmU7tXLbcs",
+  authDomain: "golfsweep.firebaseapp.com",
+  databaseURL: "https://golfsweep-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId: "golfsweep",
+  storageBucket: "golfsweep.firebasestorage.app",
+  messagingSenderId: "322746842996",
+  appId: "1:322746842996:web:2ce7ecfa0a12a330a9f621"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
+
+// ── FIELD ──────────────────────────────────────────────────────
+const FIELD = [
+  {n:"Aaron Rai",c:"ENGLAND"},{n:"Adam Scott",c:"AUSTRALIA"},{n:"Adrian Meronk",c:"POLAND"},
+  {n:"Adrien Saddier",c:"FRANCE"},{n:"Akshay Bhatia",c:"USA"},{n:"Alex Fitzpatrick",c:"ENGLAND"},
+  {n:"Alex Noren",c:"SWEDEN"},{n:"Alejandro De Castro Piera",c:"SPAIN"},
+  {n:"Alejandro Tosti",c:"ARGENTINA"},{n:"Aldrich Potgieter",c:"SOUTH AFRICA"},
+  {n:"Andy Sullivan",c:"ENGLAND"},{n:"Angel Ayora",c:"SPAIN"},
+  {n:"Antoine Rozner",c:"FRANCE"},{n:"Austen Truslow",c:"USA"},
+  {n:"Baard Bjoernevik Skogen",c:"NORWAY"},{n:"Ben Griffin",c:"USA"},
+  {n:"Bernd Wiesberger",c:"AUSTRIA"},{n:"Billy Horschel",c:"USA"},
+  {n:"Brian Harman",c:"USA"},{n:"Brooks Koepka",c:"USA"},
+  {n:"Bryan Kim",c:"USA"},
+  {n:"Bryson DeChambeau",c:"USA"},{n:"Caleb Surratt",c:"USA"},
+  {n:"Cameron Smith",c:"AUSTRALIA"},{n:"Cameron Young",c:"USA"},
+  {n:"Chris Gotterup",c:"USA"},{n:"Corey Conners",c:"CANADA"},
+  {n:"Dan Bradbury",c:"ENGLAND"},{n:"Daniel Brown",c:"ENGLAND"},
+  {n:"Daniel Hillier",c:"NEW ZEALAND"},{n:"Darren Clarke",c:"N. IRELAND"},
+  {n:"David Duval",c:"USA"},{n:"David Howard",c:"ENGLAND"},
+  {n:"David Puig",c:"SPAIN"},{n:"Eric Cole",c:"USA"},
+  {n:"Emiliano Grillo",c:"ARGENTINA"},
+  {n:"Fifa Laopakdee",c:"THAILAND"},{n:"Francesco Molinari",c:"ITALY"},
+  {n:"Grehan Stuart",c:"IRELAND"},
+  {n:"Harry Hall",c:"ENGLAND"},{n:"Haotong Li",c:"CHINA"},
+  {n:"Harris English",c:"USA"},{n:"Henrik Stenson",c:"SWEDEN"},
+  {n:"Hennie du Plessis",c:"SOUTH AFRICA"},
+  {n:"Hideki Matsuyama",c:"JAPAN"},{n:"Jack McDonald",c:"SCOTLAND"},
+  {n:"Jacob Bridgeman",c:"USA"},
+  {n:"James Nicholas",c:"USA"},{n:"Jayden Schaper",c:"SOUTH AFRICA"},
+  {n:"Jesper Svensson",c:"SWEDEN"},{n:"Joe Dean",c:"ENGLAND"},
+  {n:"Johnny Keefer",c:"USA"},{n:"Joakim Lagergren",c:"SWEDEN"},
+  {n:"Jon Rahm",c:"SPAIN"},{n:"Jonathan Caldwell",c:"N. IRELAND"},
+  {n:"Jordan Spieth",c:"USA"},{n:"Jose Luis Ballester Barrio",c:"SPAIN"},
+  {n:"Joaquin Niemann",c:"CHILE"},{n:"Justin Rose",c:"ENGLAND"},
+  {n:"Keegan Bradley",c:"USA"},{n:"Keita Nakajima",c:"JAPAN"},
+  {n:"Keith Mitchell",c:"USA"},{n:"Kristoffer Reitan",c:"NORWAY"},
+  {n:"Laurie Canter",c:"ENGLAND"},{n:"Louis Oosthuizen",c:"SOUTH AFRICA"},
+  {n:"Ludvig Aberg",c:"SWEDEN"},{n:"Lucas Herbert",c:"AUSTRALIA"},
+  {n:"Marcus Plunkett",c:"IRELAND"},{n:"Martin Couvra",c:"FRANCE"},
+  {n:"Matt Fitzpatrick",c:"ENGLAND"},{n:"Matt Wallace",c:"ENGLAND"},
+  {n:"Matthew Baldwin",c:"ENGLAND"},{n:"Matthew Southgate",c:"ENGLAND"},
+  {n:"Max Greyserman",c:"USA"},{n:"Max Homa",c:"USA"},
+  {n:"Michael Brennan",c:"USA"},{n:"Michael Thorbjornsen",c:"USA"},
+  {n:"MJ Daffue",c:"SOUTH AFRICA"},{n:"Nevill Ruiter",c:"SOUTH AFRICA"},
+  {n:"Nick Taylor",c:"CANADA"},
+  {n:"Nicolai Hojgaard",c:"DENMARK"},{n:"Niklas Norgaard",c:"DENMARK"},
+  {n:"Patrick Cantlay",c:"USA"},{n:"Patrick Reed",c:"USA"},
+  {n:"Peter Uihlein",c:"USA"},{n:"Pierceson Coody",c:"USA"},
+  {n:"Rasmus Hojgaard",c:"DENMARK"},{n:"Rasmus Neergaard-Petersen",c:"DENMARK"},
+  {n:"Robert MacIntyre",c:"SCOTLAND"},{n:"Rory McIlroy",c:"N. IRELAND"},
+  {n:"Russell Henley",c:"USA"},{n:"Ryo Hisatsune",c:"JAPAN"},
+  {n:"Sahith Theegala",c:"USA"},{n:"Sam Burns",c:"USA"},
+  {n:"Sami Valimaki",c:"FINLAND"},{n:"Sam Stevens",c:"USA"},
+  {n:"Scottie Scheffler",c:"USA"},{n:"Shane Lowry",c:"IRELAND"},
+  {n:"Si Woo Kim",c:"SOUTH KOREA"},{n:"Stewart Cink",c:"USA"},
+  {n:"Sungjae Im",c:"SOUTH KOREA"},{n:"Thomas Detry",c:"BELGIUM"},
+  {n:"Tom Kim",c:"SOUTH KOREA"},{n:"Tom McKibbin",c:"N. IRELAND"},
+  {n:"Tom Sloman",c:"ENGLAND"},{n:"Tommy Fleetwood",c:"ENGLAND"},
+  {n:"Tony Finau",c:"USA"},
+  {n:"Tyrrell Hatton",c:"ENGLAND"},{n:"Ugo Coussaud",c:"FRANCE"},
+  {n:"Victor Perez",c:"FRANCE"},
+  {n:"Viktor Hovland",c:"NORWAY"},{n:"Wyndham Clark",c:"USA"},
+  {n:"Xander Schauffele",c:"USA"},{n:"Collin Morikawa",c:"USA"},
+  {n:"J.J. Spaun",c:"USA"},{n:"John Parry",c:"ENGLAND"},
+  {n:"Nico Echavarria",c:"COLOMBIA"},{n:"Andrew Novak",c:"USA"},
+  {n:"Corey Conners",c:"CANADA"},
 ].filter(function(p,i,a){return a.findIndex(function(q){return q.n===p.n;})===i;})
  .sort(function(a,b){return a.n.localeCompare(b.n);});
 
-// ── STATE ─────────────────────────────────────────────────────
-var ENT=[],LIVE=[],SET={
-  tournamentName:"US Open 2026",
-  venue:"Shinnecock Hills Golf Club \u00b7 June 18\u201321",
-  espnEventId:"401811947",
-  adminPassword:"sweep2026"
+// ── STATE ──────────────────────────────────────────────────────
+let ENT = {};       // keyed by Firebase push ID
+let LIVE = [];
+let SET = {
+  tournamentName: "The Open Championship 2026",
+  venue: "Royal Birkdale \u00b7 July 17\u201320",
+  espnEventId: "401811949",
+  adminPassword: "sweep2026"
 };
-var adminUnlocked=false;
+let adminUnlocked = false;
+let PKI = {};
 
-// ── STORAGE ───────────────────────────────────────────────────
-function save(){localStorage.setItem("pgs_e",JSON.stringify(ENT));localStorage.setItem("pgs_s",JSON.stringify(SET));}
-function load(){
-  try{var e=localStorage.getItem("pgs_e");if(e)ENT=JSON.parse(e);}catch(x){}
-  try{var s=localStorage.getItem("pgs_s");if(s)SET=Object.assign({},SET,JSON.parse(s));}catch(x){}
+// ── FIREBASE SYNC ──────────────────────────────────────────────
+const entriesRef = ref(db, "open2026/entries");
+const settingsRef = ref(db, "open2026/settings");
+
+// Listen for real-time entry updates
+onValue(entriesRef, (snapshot) => {
+  ENT = snapshot.val() || {};
+  renderAll();
+  setSyncStatus("synced");
+}, (err) => {
+  setSyncStatus("error");
+  console.error("Firebase error:", err);
+});
+
+// Listen for settings updates
+onValue(settingsRef, (snapshot) => {
+  if (snapshot.val()) {
+    SET = Object.assign({}, SET, snapshot.val());
+    applyS();
+  }
+});
+
+function setSyncStatus(state) {
+  const dot = document.getElementById("fb-dot");
+  const txt = document.getElementById("sync-status");
+  if (!dot) return;
+  if (state === "synced") {
+    dot.className = "sync-dot";
+    txt.textContent = "\u2713 Synced";
+  } else if (state === "syncing") {
+    dot.className = "sync-dot syncing";
+    txt.textContent = "Syncing\u2026";
+  } else {
+    dot.className = "sync-dot err";
+    txt.textContent = "Sync error";
+  }
+}
+
+// ── SETTINGS ──────────────────────────────────────────────────
+function applyS() {
+  document.getElementById("sn").value = SET.tournamentName;
+  document.getElementById("sv").value = SET.venue;
+  document.getElementById("se").value = SET.espnEventId || "401811949";
+  document.getElementById("bn").textContent = SET.tournamentName;
+  document.getElementById("bm").textContent = SET.venue;
+  document.getElementById("gt").textContent = SET.tournamentName;
+}
+
+function saveS() {
+  SET.tournamentName = document.getElementById("sn").value.trim();
+  SET.venue = document.getElementById("sv").value.trim();
+  SET.espnEventId = document.getElementById("se").value.trim();
+  const newpw = document.getElementById("spw").value.trim();
+  if (newpw) SET.adminPassword = newpw;
+  document.getElementById("spw").value = "";
+  set(settingsRef, SET);
   applyS();
-}
-function applyS(){
-  document.getElementById("sn").value=SET.tournamentName;
-  document.getElementById("sv").value=SET.venue;
-  document.getElementById("se").value=SET.espnEventId||"401811947";
-  document.getElementById("bn").textContent=SET.tournamentName;
-  document.getElementById("bm").textContent=SET.venue;
-  document.getElementById("gt").textContent=SET.tournamentName;
-}
-function saveS(){
-  SET.tournamentName=document.getElementById("sn").value.trim();
-  SET.venue=document.getElementById("sv").value.trim();
-  SET.espnEventId=document.getElementById("se").value.trim();
-  var newpw=document.getElementById("spw").value.trim();
-  if(newpw)SET.adminPassword=newpw;
-  document.getElementById("spw").value="";
-  save();applyS();toast("Settings saved");doRefresh(true);
+  toast("Settings saved");
+  doRefresh(true);
 }
 
 // ── TABS ──────────────────────────────────────────────────────
-function doTab(name,el){
-  document.querySelectorAll(".panel").forEach(function(p){p.classList.remove("active");});
-  document.querySelectorAll(".tab").forEach(function(t){t.classList.remove("active");});
-  document.getElementById("panel-"+name).classList.add("active");
-  if(el)el.classList.add("active");
-  if(name==="admin")renderAdminPanel();
-  if(name==="settings")renderSettingsPanel();
+window.doTab = function(name, el) {
+  document.querySelectorAll(".panel").forEach(p => p.classList.remove("active"));
+  document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
+  document.getElementById("panel-" + name).classList.add("active");
+  if (el) el.classList.add("active");
+  if (name === "admin") renderAdminPanel();
+  if (name === "settings") renderSettingsPanel();
+};
+
+// ── ADMIN PASSWORD ─────────────────────────────────────────────
+function renderAdminPanel() {
+  document.getElementById("admin-lock").style.display = adminUnlocked ? "none" : "block";
+  document.getElementById("admin-content").style.display = adminUnlocked ? "block" : "none";
+  if (adminUnlocked) rAdmin();
 }
 
-// ── ADMIN PASSWORD ────────────────────────────────────────────
-function renderAdminPanel(){
-  if(adminUnlocked){
-    document.getElementById("admin-lock").style.display="none";
-    document.getElementById("admin-content").style.display="block";
-    rAdmin();
-  } else {
-    document.getElementById("admin-lock").style.display="block";
-    document.getElementById("admin-content").style.display="none";
-  }
+function renderSettingsPanel() {
+  document.getElementById("settings-lock").style.display = adminUnlocked ? "none" : "block";
+  document.getElementById("settings-content").style.display = adminUnlocked ? "block" : "none";
 }
-function checkPw(){
-  var val=document.getElementById("pw-input").value;
-  if(val===SET.adminPassword){
-    adminUnlocked=true;
-    document.getElementById("pw-input").value="";
-    document.getElementById("pw-err").textContent="";
-    renderAdminPanel();
-    renderSettingsPanel();
+
+window.checkPw = function() {
+  const val = document.getElementById("pw-input").value;
+  if (val === SET.adminPassword) {
+    adminUnlocked = true;
+    document.getElementById("pw-input").value = "";
+    document.getElementById("pw-err").textContent = "";
+    renderAdminPanel(); renderSettingsPanel();
   } else {
-    document.getElementById("pw-err").textContent="Incorrect password.";
-    document.getElementById("pw-input").value="";
+    document.getElementById("pw-err").textContent = "Incorrect password.";
+    document.getElementById("pw-input").value = "";
     document.getElementById("pw-input").focus();
   }
-}
-function checkPwS(){
-  var val=document.getElementById("pw-input-s").value;
-  if(val===SET.adminPassword){
-    adminUnlocked=true;
-    document.getElementById("pw-input-s").value="";
-    document.getElementById("pw-err-s").textContent="";
-    renderAdminPanel();
-    renderSettingsPanel();
+};
+
+window.checkPwS = function() {
+  const val = document.getElementById("pw-input-s").value;
+  if (val === SET.adminPassword) {
+    adminUnlocked = true;
+    document.getElementById("pw-input-s").value = "";
+    document.getElementById("pw-err-s").textContent = "";
+    renderAdminPanel(); renderSettingsPanel();
   } else {
-    document.getElementById("pw-err-s").textContent="Incorrect password.";
-    document.getElementById("pw-input-s").value="";
+    document.getElementById("pw-err-s").textContent = "Incorrect password.";
+    document.getElementById("pw-input-s").value = "";
     document.getElementById("pw-input-s").focus();
   }
-}
-function lockAdmin(){
-  adminUnlocked=false;
-  renderAdminPanel();
-  renderSettingsPanel();
+};
+
+window.lockAdmin = function() {
+  adminUnlocked = false;
+  renderAdminPanel(); renderSettingsPanel();
   toast("Admin locked");
-}
-function renderSettingsPanel(){
-  if(adminUnlocked){
-    document.getElementById("settings-lock").style.display="none";
-    document.getElementById("settings-content").style.display="block";
-  } else {
-    document.getElementById("settings-lock").style.display="block";
-    document.getElementById("settings-content").style.display="none";
-  }
-}
+};
 
 // ── ESPN ──────────────────────────────────────────────────────
-async function fetchLive(){
-  var id=SET.espnEventId||"401811947";
-  var urls=[
-    "https://site.web.api.espn.com/apis/site/v2/sports/golf/pga/scoreboard?event="+id+"&lang=en&region=gb",
-    "https://site.api.espn.com/apis/site/v2/sports/golf/pga/scoreboard?event="+id,
-    "https://site.web.api.espn.com/apis/site/v2/sports/golf/pga/scoreboard?lang=en&region=gb"
+async function fetchLive() {
+  const id = SET.espnEventId || "401811949";
+  const urls = [
+    `https://site.web.api.espn.com/apis/site/v2/sports/golf/pga/scoreboard?event=${id}&lang=en&region=gb`,
+    `https://site.api.espn.com/apis/site/v2/sports/golf/pga/scoreboard?event=${id}`
   ];
-  for(var i=0;i<urls.length;i++){
-    try{
-      var r=await fetch(urls[i]);if(!r.ok)continue;
-      var data=await r.json();
-      var result=parseESPN(data);
-      if(result&&result.length>0)return result;
-    }catch(e){continue;}
+  for (const url of urls) {
+    try {
+      const r = await fetch(url);
+      if (!r.ok) continue;
+      const data = await r.json();
+      const result = parseESPN(data);
+      if (result && result.length > 0) return result;
+    } catch(e) { continue; }
   }
   return null;
 }
 
-function parseScore(s){
-  if(!s||s==="-"||s==="")return 9999;
-  if(s==="E")return 0;
-  var n=parseInt(s);return isNaN(n)?9999:n;
+function parseScore(s) {
+  if (!s || s === "-" || s === "") return 9999;
+  if (s === "E") return 0;
+  const n = parseInt(s);
+  return isNaN(n) ? 9999 : n;
 }
 
-function parseESPN(d){
-  var f=[];
-  try{
-    var events=d.events||[];
-    var ev=events.find(function(e){var n=(e.name||"").toLowerCase();return n.includes("u.s. open")||n.includes("us open")||n.includes("pga championship");});
-    if(!ev)ev=events[0];
-    if(!ev)return f;
-    var co=ev.competitions&&ev.competitions[0];if(!co)return f;
-    var currentPeriod=(co.status&&co.status.period)||1;
+function parseESPN(d) {
+  const f = [];
+  try {
+    const events = d.events || [];
+    let ev = events.find(e => {
+      const n = (e.name || "").toLowerCase();
+      return n.includes("open championship") || n.includes("british open") || n.includes("u.s. open") || n.includes("pga championship");
+    }) || events[0];
+    if (!ev) return f;
+    const co = ev.competitions && ev.competitions[0];
+    if (!co) return f;
+    const currentPeriod = (co.status && co.status.period) || 1;
 
-    (co.competitors||[]).forEach(function(c){
-      var name=(c.athlete&&(c.athlete.displayName||c.athlete.fullName))||"?";
-      var score=(c.score||"").trim();
-      if(score==="0")score="E";
-      var ls=c.linescores||[];
-      var wd=score==="WD"||score==="DQ";
-      var cut=!wd&&ls.length<currentPeriod;
+    (co.competitors || []).forEach(c => {
+      const name = (c.athlete && (c.athlete.displayName || c.athlete.fullName)) || "?";
+      const score = (c.score || "").trim() === "0" ? "E" : (c.score || "").trim();
+      const ls = c.linescores || [];
+      const wd = score === "WD" || score === "DQ";
+      const cut = !wd && ls.length < currentPeriod;
 
-      var r1="",r2="",r3="",r4="",thru="";
-      var lastDone=-1,inProg=-1,s1=0,s2=0,s3=0,s4=0;
-      for(var ri=0;ri<ls.length;ri++){
-        var lv=ls[ri].value||0,ldv=ls[ri].displayValue||"";
-        var holesPlayed=(ls[ri].linescores&&ls[ri].linescores.length)||0;
-        if(holesPlayed>=18){
-          // Round complete — 18 holes recorded
+      let r1="",r2="",r3="",r4="",thru="",lastDone=-1,inProg=-1,s1=0,s2=0,s3=0,s4=0;
+      for (let ri = 0; ri < ls.length; ri++) {
+        const lv = ls[ri].value || 0;
+        const ldv = ls[ri].displayValue || "";
+        const holesPlayed = (ls[ri].linescores && ls[ri].linescores.length) || 0;
+        if (holesPlayed >= 18) {
+          if (ri===0){s1=lv;r1=ldv||String(lv);}
+          else if(ri===1){s2=lv;r2=ldv||String(lv);}
+          else if(ri===2){s3=lv;r3=ldv||String(lv);}
+          else if(ri===3){s4=lv;r4=ldv||String(lv);}
+          lastDone = ri;
+        } else if (holesPlayed > 0) {
+          inProg = ri;
+          if(ri===0)r1=ldv;else if(ri===1)r2=ldv;else if(ri===2)r3=ldv;else if(ri===3)r4=ldv;
+        } else if (lv > 18 && holesPlayed === 0) {
           if(ri===0){s1=lv;r1=ldv||String(lv);}
           else if(ri===1){s2=lv;r2=ldv||String(lv);}
           else if(ri===2){s3=lv;r3=ldv||String(lv);}
           else if(ri===3){s4=lv;r4=ldv||String(lv);}
-          lastDone=ri;
-        } else if(holesPlayed>0){
-          // Round in progress — holesPlayed is the reliable hole count
-          inProg=ri;
+          lastDone = ri;
+        } else if (ldv && ldv !== "-" && lv === 0) {
           if(ri===0)r1=ldv;else if(ri===1)r2=ldv;else if(ri===2)r3=ldv;else if(ri===3)r4=ldv;
-        } else if(lv>18&&holesPlayed===0){
-          // Fallback: no nested holes but value looks like a stroke total (older API shape)
-          if(ri===0){s1=lv;r1=ldv||String(lv);}
-          else if(ri===1){s2=lv;r2=ldv||String(lv);}
-          else if(ri===2){s3=lv;r3=ldv||String(lv);}
-          else if(ri===3){s4=lv;r4=ldv||String(lv);}
-          lastDone=ri;
-        } else if(ldv&&ldv!=="-"&&lv===0){
-          if(ri===0)r1=ldv;else if(ri===1)r2=ldv;else if(ri===2)r3=ldv;else if(ri===3)r4=ldv;
-          lastDone=ri;
+          lastDone = ri;
         }
       }
-      if(inProg>=0){
-        var hp=(ls[inProg].linescores&&ls[inProg].linescores.length)||0;
-        thru=String(hp);
-      } else if(lastDone>=0){
-        var nxt=ls[lastDone+1];
-        thru=(nxt&&(nxt.value===0||!nxt.value))?"0":"F";
+      if (inProg >= 0) {
+        thru = String((ls[inProg].linescores && ls[inProg].linescores.length) || 0);
+      } else if (lastDone >= 0) {
+        const nxt = ls[lastDone + 1];
+        thru = (nxt && (nxt.value === 0 || !nxt.value)) ? "0" : "F";
       } else {
-        thru="0";
+        thru = "0";
       }
 
-      var rNums=[s1,s2,s3,s4].filter(function(n){return n>60&&n<90;});
-      f.push({name:name,score:score,scoreNum:parseScore(score),thru:thru,
-        r1:r1,r2:r2,r3:r3,r4:r4,cut:cut,wd:wd,br:rNums.length?Math.min.apply(null,rNums):null});
+      const rNums = [s1,s2,s3,s4].filter(n => n > 60 && n < 90);
+      f.push({ name, score, scoreNum: parseScore(score), thru,
+        r1, r2, r3, r4, cut, wd, br: rNums.length ? Math.min(...rNums) : null });
     });
 
-    // Sort: active players by score first, then CUT, then WD (within each group, by score)
-    f.sort(function(a,b){
-      var aOut=(a.cut||a.wd)?1:0,bOut=(b.cut||b.wd)?1:0;
-      if(aOut!==bOut)return aOut-bOut;
-      if(a.cut&&b.wd)return -1;if(a.wd&&b.cut)return 1;
-      return a.scoreNum-b.scoreNum;
+    // Sort: active by score, CUT below, WD at bottom
+    f.sort((a, b) => {
+      const aOut = (a.cut||a.wd) ? 1 : 0, bOut = (b.cut||b.wd) ? 1 : 0;
+      if (aOut !== bOut) return aOut - bOut;
+      if (a.cut && b.wd) return -1; if (a.wd && b.cut) return 1;
+      return a.scoreNum - b.scoreNum;
     });
 
-    // Assign positions to EVERYONE including cut/WD players — they get their real
-    // finishing position in the full field, just tagged with CUT/WD for display.
-    var rank=1;
-    for(var i=0;i<f.length;i++){
-      if(i>0&&f[i].scoreNum===f[i-1].scoreNum&&!(f[i].wd&&!f[i-1].wd)){
-        f[i].pos="T"+rank;
-        if(f[i-1].pos===String(rank))f[i-1].pos="T"+rank;
+    // Assign real finishing positions to everyone including CUT/WD
+    let rank = 1;
+    for (let i = 0; i < f.length; i++) {
+      if (i > 0 && f[i].scoreNum === f[i-1].scoreNum && !(f[i].wd && !f[i-1].wd)) {
+        f[i].pos = "T" + rank;
+        if (f[i-1].pos === String(rank)) f[i-1].pos = "T" + rank;
       } else {
-        rank=i+1;
-        f[i].pos=String(rank);
+        rank = i + 1;
+        f[i].pos = String(rank);
       }
-      f[i].posNum=rank;
+      f[i].posNum = rank;
     }
-  }catch(e){console.warn("ESPN parse error:",e);}
+  } catch(e) { console.warn("ESPN parse error:", e); }
   return f;
 }
 
-function nm(s){
+function nm(s) {
   return s.toLowerCase()
     .replace(/[àáâãäå]/g,"a").replace(/[èéêë]/g,"e").replace(/[ìíîï]/g,"i")
     .replace(/[òóôõö]/g,"o").replace(/[ùúûü]/g,"u").replace(/[ýÿ]/g,"y")
@@ -652,355 +671,351 @@ function nm(s){
     .replace(/[^a-z0-9 ]/g,"").replace(/\s+/g," ").trim();
 }
 
-function findG(name){
-  if(!name||!LIVE.length)return null;
-  var n=nm(name);
-  var g=LIVE.find(function(p){return nm(p.name)===n;});if(g)return g;
-  var qw=n.split(" ");
-  g=LIVE.find(function(p){var pw=nm(p.name).split(" ");return pw.length===qw.length&&qw.every(function(w){return pw.indexOf(w)>=0;});});if(g)return g;
-  var pts=n.split(" "),last=pts[pts.length-1],first=pts[0];
-  if(pts.length>=2){
-    g=LIVE.find(function(p){var pp=nm(p.name).split(" ");return pp[pp.length-1]===last&&pp[0]===first;});if(g)return g;
-    g=LIVE.find(function(p){var pp=nm(p.name).split(" ");return pp[pp.length-1]===last&&(pp[0].indexOf(first)===0||first.indexOf(pp[0])===0);});if(g)return g;
+function findG(name) {
+  if (!name || !LIVE.length) return null;
+  const n = nm(name);
+  let g = LIVE.find(p => nm(p.name) === n); if (g) return g;
+  const qw = n.split(" ");
+  g = LIVE.find(p => { const pw = nm(p.name).split(" "); return pw.length===qw.length && qw.every(w => pw.includes(w)); }); if (g) return g;
+  const pts = n.split(" "), last = pts[pts.length-1], first = pts[0];
+  if (pts.length >= 2) {
+    g = LIVE.find(p => { const pp = nm(p.name).split(" "); return pp[pp.length-1]===last && pp[0]===first; }); if (g) return g;
+    g = LIVE.find(p => { const pp = nm(p.name).split(" "); return pp[pp.length-1]===last && (pp[0].startsWith(first)||first.startsWith(pp[0])); }); if (g) return g;
   }
   return null;
 }
 
-async function doRefresh(man){
-  if(man){document.getElementById("lst").textContent="FETCHING\u2026";document.getElementById("ldot").className="dot stale";}
-  var f=await fetchLive();
-  if(f&&f.length){
-    LIVE=f;var now=new Date();
-    document.getElementById("ldot").className="dot";
-    document.getElementById("lst").textContent="LIVE \u00b7 "+now.toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"});
-    document.getElementById("lu").textContent="Last updated: "+now.toLocaleString();
-    document.getElementById("bs").textContent="Live Data";
-    document.getElementById("gm").textContent=LIVE.length+" players \u00b7 gold = your picks";
+window.doRefresh = async function(man) {
+  if (man) { document.getElementById("lst").textContent = "FETCHING\u2026"; document.getElementById("ldot").className = "dot stale"; }
+  const f = await fetchLive();
+  if (f && f.length) {
+    LIVE = f;
+    const now = new Date();
+    document.getElementById("ldot").className = "dot";
+    document.getElementById("lst").textContent = `LIVE \u00b7 ${now.toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"})}`;
+    document.getElementById("lu").textContent = `Last updated: ${now.toLocaleString()}`;
+    document.getElementById("bs").textContent = "Live Data";
+    document.getElementById("gm").textContent = `${LIVE.length} players \u00b7 gold = your picks`;
   } else {
-    document.getElementById("ldot").className="dot stale";
-    document.getElementById("lst").textContent="NO DATA YET";
-    document.getElementById("bs").textContent="Pre-Tournament";
-    document.getElementById("gm").textContent="No live data yet";
-    if(man)toast("No live data yet \u2014 check back Thursday");
+    document.getElementById("ldot").className = "dot stale";
+    document.getElementById("lst").textContent = "NO DATA YET";
+    document.getElementById("bs").textContent = "Pre-Tournament";
+    document.getElementById("gm").textContent = "No live data yet";
+    if (man) toast("No live data yet \u2014 check back Thursday");
   }
   renderAll();
+};
+
+// ── SCORING ────────────────────────────────────────────────────
+function entrantList() {
+  return Object.entries(ENT).map(([id, e]) => ({ id, ...e }));
 }
 
-// ── SCORING ───────────────────────────────────────────────────
-function calcSc(e){
-  if(!LIVE.length)return null;
-  var tot=0,pos=[],rds=[],gs=[];
-  [e.g1,e.g2,e.g3].forEach(function(name){
-    var d=findG(name);gs.push({name:name,data:d});
-    if(d){tot+=d.posNum;pos.push(d.posNum);if(d.br)rds.push(d.br);}
-    else{tot+=999;pos.push(999);}
+function calcSc(e) {
+  if (!LIVE.length) return null;
+  let tot = 0; const pos = [], rds = [], gs = [];
+  [e.g1, e.g2, e.g3].forEach(name => {
+    const d = findG(name);
+    gs.push({ name, data: d });
+    if (d) { tot += d.posNum; pos.push(d.posNum); if (d.br) rds.push(d.br); }
+    else { tot += 999; pos.push(999); }
   });
-  return{total:tot,bp:pos.length?Math.min.apply(null,pos):999,br:rds.length?Math.min.apply(null,rds):999,gs:gs};
+  return { total: tot, bp: pos.length ? Math.min(...pos) : 999, br: rds.length ? Math.min(...rds) : 999, gs };
 }
-function rankE(){
-  var ws=(LIVE.length&&parseInt(LIVE[0].score))||0;
-  return ENT.map(function(e,i){return{i:i,e:e,r:calcSc(e)};})
-    .sort(function(a,b){
-      var ta=a.r?a.r.total:9999,tb=b.r?b.r.total:9999;if(ta!==tb)return ta-tb;
-      var ba=a.r?a.r.bp:9999,bb=b.r?b.r.bp:9999;if(ba!==bb)return ba-bb;
-      var ra=a.r?a.r.br:999,rb=b.r?b.r.br:999;if(ra!==rb)return ra-rb;
-      return Math.abs((a.e.pred||0)-ws)-Math.abs((b.e.pred||0)-ws);
+
+function rankE() {
+  const ws = (LIVE.length && parseInt(LIVE[0].score)) || 0;
+  return entrantList()
+    .map(e => ({ id: e.id, e, r: calcSc(e) }))
+    .sort((a, b) => {
+      const ta = a.r ? a.r.total : 9999, tb = b.r ? b.r.total : 9999; if (ta !== tb) return ta - tb;
+      const ba = a.r ? a.r.bp : 9999, bb = b.r ? b.r.bp : 9999; if (ba !== bb) return ba - bb;
+      const ra = a.r ? a.r.br : 999, rb = b.r ? b.r.br : 999; if (ra !== rb) return ra - rb;
+      return Math.abs((a.e.pred||0)-ws) - Math.abs((b.e.pred||0)-ws);
     });
 }
 
-// ── RENDER ────────────────────────────────────────────────────
-function renderAll(){rSweep();rGolf();if(adminUnlocked)rAdmin();}
-function esc(s){return String(s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");}
+// ── RENDER ─────────────────────────────────────────────────────
+function renderAll() { rSweep(); rGolf(); if (adminUnlocked) rAdmin(); }
 
-function rSweep(){
-  var tb=document.getElementById("stb");
-  if(!ENT.length){tb.innerHTML="<tr><td colspan=\"6\"><div class=\"empty-s\"><div class=\"ico\">&#9971;</div><p>No entries yet.<br><strong>Add some via Manage Entries.</strong></p></div></td></tr>";return;}
-  var ranked=rankE(),html="";
-  ranked.forEach(function(item,rank){
-    var e=item.e,r=item.r,pos=rank+1;
-    var rk="rnk"+(pos===1?" gold":pos===2?" silver":pos===3?" bronze":"");
-    var hl=LIVE.length>0;
-    var tags="";
-    if(r&&r.gs){
-      tags=r.gs.map(function(g){
-        var d=g.data;
-        if(!d)return "<span class=\"gtag\">"+esc(g.name)+" <span class=\"gp\" style=\"color:#6b8070\">&mdash;</span></span>";
-        var p=(d.cut||d.wd)?"<span class=\"gp cut\">"+esc(d.pos)+" "+(d.cut?"CUT":"WD")+"</span>":"<span class=\"gp\">"+esc(d.pos)+"</span>";
-        return "<span class=\"gtag\">"+esc(d.name)+" "+p+"</span>";
-      }).join("");
-    } else {
-      tags=[e.g1,e.g2,e.g3].map(function(g){return "<span class=\"gtag\">"+esc(g)+" <span class=\"gp\" style=\"color:#6b8070\">&mdash;</span></span>";}).join("");
+function esc(s) { return String(s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
+
+function rSweep() {
+  const tb = document.getElementById("stb");
+  const list = entrantList();
+  if (!list.length) {
+    tb.innerHTML = `<tr><td colspan="6"><div class="empty-s"><div class="ico">&#9971;</div><p>No entries yet.<br><strong>Add some via Manage Entries.</strong></p></div></td></tr>`;
+    return;
+  }
+  const ranked = rankE();
+  const hl = LIVE.length > 0;
+  tb.innerHTML = ranked.map((item, rank) => {
+    const e = item.e, r = item.r, pos = rank + 1;
+    const rk = "rnk" + (pos===1?" gold":pos===2?" silver":pos===3?" bronze":"");
+    const tags = r && r.gs ? r.gs.map(g => {
+      const d = g.data;
+      if (!d) return `<span class="gtag">${esc(g.name)} <span class="gp" style="color:#6b8070">&mdash;</span></span>`;
+      const p = (d.cut||d.wd) ? `<span class="gp cut">${esc(d.pos)} ${d.cut?"CUT":"WD"}</span>` : `<span class="gp">${esc(d.pos)}</span>`;
+      return `<span class="gtag">${esc(d.name)} ${p}</span>`;
+    }).join("") : [e.g1,e.g2,e.g3].map(g => `<span class="gtag">${esc(g)} <span class="gp" style="color:#6b8070">&mdash;</span></span>`).join("");
+
+    let sh = "";
+    if (!hl) { sh = `<div class="pnd">&mdash;</div><div class="scd">Awaiting scores</div>`; }
+    else if (r && r.total < 9000) {
+      const bd = [e.g1,e.g2,e.g3].map(n => { const d = findG(n); return d ? d.posNum : "?"; }).join("+");
+      sh = `<div class="sc${pos===1?" lead":""}">${r.total}</div><div class="scd">${bd}</div>`;
+    } else { sh = `<div class="sc" style="opacity:.35">&mdash;</div>`; }
+
+    const bi = (r && r.bp < 9999) ? `Best: ${r.bp===1?"1st":"T"+r.bp}` : "&mdash;";
+    let tl = "";
+    if (rank > 0 && r && ranked[rank-1].r) {
+      const pr = ranked[rank-1].r;
+      if (r.total === pr.total) tl = r.bp !== pr.bp ? "TB1" : r.br !== pr.br ? "TB2" : "TB3";
     }
-    var sh="";
-    if(!hl){sh="<div class=\"pnd\">&mdash;</div><div class=\"scd\">Awaiting scores</div>";}
-    else if(r&&r.total<9000){
-      var bd=[e.g1,e.g2,e.g3].map(function(n){var d=findG(n);return d?d.posNum:"?";}).join("+");
-      sh="<div class=\"sc"+(pos===1?" lead":"")+"\">"+r.total+"</div><div class=\"scd\">"+bd+"</div>";
-    } else {sh="<div class=\"sc\" style=\"opacity:.35\">&mdash;</div>";}
-    var bi=(r&&r.bp<9999)?"Best: "+(r.bp===1?"1st":"T"+r.bp):"&mdash;";
-    var tl="";
-    if(rank>0&&r&&ranked[rank-1].r){var pr=ranked[rank-1].r;if(r.total===pr.total)tl=r.bp!==pr.bp?"TB1":r.br!==pr.br?"TB2":"TB3";}
-    var pd=(e.pred!=null)?((e.pred>0?"+":"")+e.pred):"&mdash;";
-    html+="<tr><td class=\""+rk+"\">"+pos+"</td>"
-      +"<td><div class=\"en\">"+esc(e.name)+"</div><div class=\"gtags\">"+tags+"</div>"+(tl?"<span class=\"tbl\">"+tl+" tiebreaker</span>":"")+"</td>"
-      +"<td>"+sh+"</td>"
-      +"<td style=\"font-family:'DM Mono',monospace;font-size:.75rem;color:#6b8070\">"+bi+"</td>"
-      +"<td class=\"prc\">"+pd+"</td>"
-      +"<td style=\"text-align:right\"><button class=\"btn bs\" onclick=\"opEd("+item.i+")\">Edit</button></td></tr>";
-  });
-  tb.innerHTML=html;
+    const pd = (e.pred != null) ? ((e.pred>0?"+":"")+e.pred) : "&mdash;";
+    return `<tr><td class="${rk}">${pos}</td>
+      <td><div class="en">${esc(e.name)}</div><div class="gtags">${tags}</div>${tl?`<span class="tbl">${tl} tiebreaker</span>`:""}</td>
+      <td>${sh}</td>
+      <td style="font-family:'DM Mono',monospace;font-size:.75rem;color:#6b8070">${bi}</td>
+      <td class="prc">${pd}</td>
+      <td style="text-align:right"><button class="btn bs" onclick="opEd('${item.id}')">Edit</button></td></tr>`;
+  }).join("");
 }
 
-function rGolf(){
-  var tb=document.getElementById("gtb");
-  if(!LIVE.length){tb.innerHTML="<tr><td colspan=\"9\" style=\"text-align:center;padding:2rem;color:#6b8070;font-family:'DM Mono',monospace;font-size:.8rem\">No live data yet. Check back Thursday.</td></tr>";return;}
-  var pk={};
-  ENT.forEach(function(e){[e.g1,e.g2,e.g3].forEach(function(n){if(n)pk[nm(n)]=true;});});
-  function isPk(name){var n=nm(name);if(pk[n])return true;return Object.keys(pk).some(function(p){return n.endsWith(p.split(" ").pop());});}
-  var html="";
-  LIVE.forEach(function(p){
-    var hi=isPk(p.name);
-    var sc=p.score&&p.score[0]==="-"?"gs un":(p.score==="E"||p.score==="0")?"gs ev":"gs ov";
-    var tot=[p.r1,p.r2,p.r3,p.r4].reduce(function(s,r){return s+(parseInt(r)||0);},0);
-    html+="<tr class=\""+(hi?"hir":"")+"\"><td class=\"gr\">"+esc(p.pos)+"</td>"
-      +"<td style=\"font-weight:600;color:#1c2e21\">"+esc(p.name)+(p.cut?"<span class=\"ctag\">CUT</span>":"")+(p.wd?"<span class=\"wtag\">WD</span>":"")+"</td>"
-      +"<td class=\""+sc+"\">"+esc(p.score)+"</td><td class=\"gr\">"+esc(p.thru)+"</td>"
-      +"<td class=\"gr\">"+p.r1+"</td><td class=\"gr\">"+p.r2+"</td><td class=\"gr\">"+p.r3+"</td><td class=\"gr\">"+p.r4+"</td>"
-      +"<td class=\"gr\" style=\"font-weight:600\">"+(tot||"")+"</td></tr>";
-  });
-  tb.innerHTML=html;
+function rGolf() {
+  const tb = document.getElementById("gtb");
+  if (!LIVE.length) { tb.innerHTML = `<tr><td colspan="9" style="text-align:center;padding:2rem;color:#6b8070;font-family:'DM Mono',monospace;font-size:.8rem">No live data yet. Check back Thursday.</td></tr>`; return; }
+  const pk = {};
+  entrantList().forEach(e => [e.g1,e.g2,e.g3].forEach(n => { if(n) pk[nm(n)] = true; }));
+  const isPk = name => { const n = nm(name); if (pk[n]) return true; return Object.keys(pk).some(p => n.endsWith(p.split(" ").pop())); };
+  tb.innerHTML = LIVE.map(p => {
+    const hi = isPk(p.name);
+    const sc = p.score && p.score[0]==="-" ? "gs un" : (p.score==="E"||p.score==="0") ? "gs ev" : "gs ov";
+    const tot = [p.r1,p.r2,p.r3,p.r4].reduce((s,r) => s+(parseInt(r)||0), 0);
+    return `<tr class="${hi?"hir":""}"><td class="gr">${esc(p.pos)}</td>
+      <td style="font-weight:600;color:#1c2e21">${esc(p.name)}${p.cut?'<span class="ctag">CUT</span>':""}${p.wd?'<span class="wtag">WD</span>':""}</td>
+      <td class="${sc}">${esc(p.score)}</td><td class="gr">${esc(p.thru)}</td>
+      <td class="gr">${p.r1}</td><td class="gr">${p.r2}</td><td class="gr">${p.r3}</td><td class="gr">${p.r4}</td>
+      <td class="gr" style="font-weight:600">${tot||""}</td></tr>`;
+  }).join("");
 }
 
-function rAdmin(){
-  var el=document.getElementById("elist");
-  if(!ENT.length){el.innerHTML="<p style=\"color:#6b8070;font-size:.85rem;margin-top:1rem\">No entries yet.</p>";return;}
-  el.innerHTML=ENT.map(function(e,i){
-    var pd=(e.pred!=null)?((e.pred>0?"+":"")+e.pred):"&mdash;";
-    return "<div class=\"ecard\"><div class=\"ecn\">"+esc(e.name)+"</div>"
-      +"<div class=\"ecg\">"+[e.g1,e.g2,e.g3].map(function(g){return "<span class=\"gtag\">"+esc(g)+"</span>";}).join("")
-      +"<span class=\"gtag\" style=\"background:#f5f5f5;color:#6b8070\">Pred: "+pd+"</span></div>"
-      +"<div class=\"eca\"><button class=\"btn bs\" onclick=\"opEd("+i+")\">Edit</button>"
-      +"<button class=\"btn bd\" onclick=\"delE("+i+")\">&times;</button></div></div>";
+function rAdmin() {
+  const el = document.getElementById("elist");
+  const list = entrantList();
+  if (!list.length) { el.innerHTML = `<p style="color:#6b8070;font-size:.85rem;margin-top:1rem">No entries yet.</p>`; return; }
+  el.innerHTML = list.map(e => {
+    const pd = (e.pred != null) ? ((e.pred>0?"+":"")+e.pred) : "&mdash;";
+    return `<div class="ecard"><div class="ecn">${esc(e.name)}</div>
+      <div class="ecg">${[e.g1,e.g2,e.g3].map(g => `<span class="gtag">${esc(g)}</span>`).join("")}
+      <span class="gtag" style="background:#f5f5f5;color:#6b8070">Pred: ${pd}</span></div>
+      <div class="eca"><button class="btn bs" onclick="opEd('${e.id}')">Edit</button>
+      <button class="btn bd" onclick="delE('${e.id}')">&times;</button></div></div>`;
   }).join("");
 }
 
 // ── CRUD ──────────────────────────────────────────────────────
-function addE(){
-  var name=document.getElementById("fn").value.trim();
-  var g1=document.getElementById("fg1").value.trim();
-  var g2=document.getElementById("fg2").value.trim();
-  var g3=document.getElementById("fg3").value.trim();
-  var pred=document.getElementById("fp").value;
-  if(!name||!g1||!g2||!g3){toast("Please fill in name and all 3 golfers");return;}
-  ENT.push({name:name,g1:g1,g2:g2,g3:g3,pred:pred!==""?parseInt(pred):null});
-  save();renderAll();
-  ["fn","fg1","fg2","fg3","fp"].forEach(function(id){document.getElementById(id).value="";});
-  toast(name+" added!");
-}
-function delE(i){if(!confirm("Remove "+ENT[i].name+"?"))return;ENT.splice(i,1);save();renderAll();}
-function opEd(i){
-  var e=ENT[i];
-  document.getElementById("ei").value=i;
-  document.getElementById("en2").value=e.name;
-  document.getElementById("eg1").value=e.g1;
-  document.getElementById("eg2").value=e.g2;
-  document.getElementById("eg3").value=e.g3;
-  document.getElementById("ep").value=(e.pred!=null)?e.pred:"";
+window.addE = function() {
+  const name = document.getElementById("fn").value.trim();
+  const g1 = document.getElementById("fg1").value.trim();
+  const g2 = document.getElementById("fg2").value.trim();
+  const g3 = document.getElementById("fg3").value.trim();
+  const pred = document.getElementById("fp").value;
+  if (!name||!g1||!g2||!g3) { toast("Please fill in name and all 3 golfers"); return; }
+  setSyncStatus("syncing");
+  push(entriesRef, { name, g1, g2, g3, pred: pred !== "" ? parseInt(pred) : null });
+  ["fn","fg1","fg2","fg3","fp"].forEach(id => document.getElementById(id).value = "");
+  toast(`${name} added!`);
+};
+
+window.delE = function(id) {
+  const e = ENT[id];
+  if (!e || !confirm(`Remove ${e.name}?`)) return;
+  setSyncStatus("syncing");
+  remove(ref(db, `open2026/entries/${id}`));
+};
+
+window.opEd = function(id) {
+  const e = ENT[id];
+  if (!e) return;
+  document.getElementById("ei").value = id;
+  document.getElementById("en2").value = e.name;
+  document.getElementById("eg1").value = e.g1;
+  document.getElementById("eg2").value = e.g2;
+  document.getElementById("eg3").value = e.g3;
+  document.getElementById("ep").value = (e.pred != null) ? e.pred : "";
   document.getElementById("emod").classList.add("open");
-}
-function clsMod(id){
+};
+
+window.clsMod = function(id) {
   document.getElementById(id).classList.remove("open");
-  if(id==="emod")["pe1","pe2","pe3"].forEach(function(x){var el=document.getElementById(x);if(el)el.classList.remove("open");});
-}
-function saveE(){
-  var i=parseInt(document.getElementById("ei").value);
-  var pred=document.getElementById("ep").value;
-  ENT[i]={name:document.getElementById("en2").value.trim(),
-    g1:document.getElementById("eg1").value.trim(),
-    g2:document.getElementById("eg2").value.trim(),
-    g3:document.getElementById("eg3").value.trim(),
-    pred:pred!==""?parseInt(pred):null};
-  save();renderAll();clsMod("emod");toast("Entry updated");
-}
+  if (id === "emod") ["pe1","pe2","pe3"].forEach(x => { const el = document.getElementById(x); if(el) el.classList.remove("open"); });
+};
+
+window.saveE = function() {
+  const id = document.getElementById("ei").value;
+  const pred = document.getElementById("ep").value;
+  setSyncStatus("syncing");
+  update(ref(db, `open2026/entries/${id}`), {
+    name: document.getElementById("en2").value.trim(),
+    g1: document.getElementById("eg1").value.trim(),
+    g2: document.getElementById("eg2").value.trim(),
+    g3: document.getElementById("eg3").value.trim(),
+    pred: pred !== "" ? parseInt(pred) : null
+  });
+  clsMod("emod");
+  toast("Entry updated");
+};
+
+window.clrAll = function() {
+  if (!confirm("Clear ALL entries from Firebase? This cannot be undone.")) return;
+  setSyncStatus("syncing");
+  set(entriesRef, null);
+  toast("All entries cleared");
+};
 
 // ── PICKER ────────────────────────────────────────────────────
-var PKI={};
-function pRender(id,q){
-  var list=document.getElementById(id);if(!list)return;
-  var ql=q.trim().toLowerCase();
-  var src=FIELD.slice();
-  LIVE.forEach(function(p){if(!FIELD.find(function(f){return nm(f.n)===nm(p.name);}))src.push({n:p.name,c:"Live"});});
-  var matches=ql?src.filter(function(p){return p.n.toLowerCase().includes(ql);}):src;
-  if(!matches.length){list.innerHTML="<div class=\"pke\">No players found</div>";PKI[id]=-1;return;}
-  var frag=document.createDocumentFragment();
-  matches.slice(0,60).forEach(function(p){
-    var ld=LIVE.find(function(l){return l.name===p.n;});
-    var ps=ld?" \u00b7 "+ld.pos:"";
-    var div=document.createElement("div");
-    div.className="pki";
-    div.innerHTML="<span>"+esc(p.n)+ps+"</span><span class=\"pkc\">"+p.c+"</span>";
-    div.addEventListener("mousedown",function(ev){
+function pRender(id, q) {
+  const list = document.getElementById(id); if (!list) return;
+  const ql = q.trim().toLowerCase();
+  const src = [...FIELD];
+  LIVE.forEach(p => { if (!FIELD.find(f => nm(f.n) === nm(p.name))) src.push({n: p.name, c: "Live"}); });
+  const matches = ql ? src.filter(p => p.n.toLowerCase().includes(ql)) : src;
+  if (!matches.length) { list.innerHTML = `<div class="pke">No players found</div>`; PKI[id]=-1; return; }
+  const frag = document.createDocumentFragment();
+  matches.slice(0, 60).forEach(p => {
+    const ld = LIVE.find(l => l.name === p.n);
+    const ps = ld ? ` \u00b7 ${ld.pos}` : "";
+    const div = document.createElement("div");
+    div.className = "pki";
+    div.innerHTML = `<span>${esc(p.n)}${ps}</span><span class="pkc">${p.c}</span>`;
+    div.addEventListener("mousedown", ev => {
       ev.preventDefault();
-      var drop=document.getElementById(id);
-      var inp=drop?drop.previousElementSibling:null;
-      if(inp)inp.value=p.n;
-      if(drop)drop.classList.remove("open");
+      const drop = document.getElementById(id);
+      const inp = drop ? drop.previousElementSibling : null;
+      if (inp) inp.value = p.n;
+      if (drop) drop.classList.remove("open");
     });
     frag.appendChild(div);
   });
-  list.innerHTML="";
+  list.innerHTML = "";
   list.appendChild(frag);
-  PKI[id]=-1;
+  PKI[id] = -1;
 }
-function po(id,inp){
-  var list=document.getElementById(id);if(!list)return;
-  pRender(id,inp?inp.value:"");
-  document.querySelectorAll(".pkd").forEach(function(d){if(d.id!==id)d.classList.remove("open");});
+
+window.po = function(id, inp) {
+  const list = document.getElementById(id); if (!list) return;
+  pRender(id, inp ? inp.value : "");
+  document.querySelectorAll(".pkd").forEach(d => { if (d.id !== id) d.classList.remove("open"); });
   list.classList.add("open");
-}
-function pf(inp,id){pRender(id,inp.value);document.getElementById(id).classList.add("open");}
-// psel replaced by inline addEventListener in pRender
-function pk(ev,id,inp){
-  var list=document.getElementById(id);
-  if(!list.classList.contains("open")){if(ev.key==="ArrowDown"||ev.key==="Enter"){po(id,inp);}return;}
-  var items=list.querySelectorAll(".pki");if(!items.length)return;
-  var idx=PKI[id]||-1;
-  if(ev.key==="ArrowDown"){ev.preventDefault();idx=Math.min(idx+1,items.length-1);}
-  else if(ev.key==="ArrowUp"){ev.preventDefault();idx=Math.max(idx-1,-1);}
-  else if(ev.key==="Enter"&&idx>=0){ev.preventDefault();items[idx].dispatchEvent(new MouseEvent("mousedown"));return;}
-  else if(ev.key==="Escape"){list.classList.remove("open");return;}
+};
+
+window.pf = function(inp, id) { pRender(id, inp.value); document.getElementById(id).classList.add("open"); };
+
+window.pk = function(ev, id, inp) {
+  const list = document.getElementById(id);
+  if (!list.classList.contains("open")) { if (ev.key==="ArrowDown"||ev.key==="Enter") { po(id, inp); } return; }
+  const items = list.querySelectorAll(".pki"); if (!items.length) return;
+  let idx = PKI[id] || -1;
+  if (ev.key==="ArrowDown") { ev.preventDefault(); idx = Math.min(idx+1, items.length-1); }
+  else if (ev.key==="ArrowUp") { ev.preventDefault(); idx = Math.max(idx-1, -1); }
+  else if (ev.key==="Enter" && idx>=0) { ev.preventDefault(); items[idx].dispatchEvent(new MouseEvent("mousedown")); return; }
+  else if (ev.key==="Escape") { list.classList.remove("open"); return; }
   else return;
-  PKI[id]=idx;
-  items.forEach(function(item,i){item.classList.toggle("kf",i===idx);});
-  if(idx>=0)items[idx].scrollIntoView({block:"nearest"});
-}
-document.addEventListener("click",function(e){
-  if(!e.target.closest(".pkw"))document.querySelectorAll(".pkd").forEach(function(l){l.classList.remove("open");});
+  PKI[id] = idx;
+  items.forEach((item,i) => item.classList.toggle("kf", i===idx));
+  if (idx >= 0) items[idx].scrollIntoView({block:"nearest"});
+};
+
+document.addEventListener("click", e => {
+  if (!e.target.closest(".pkw")) document.querySelectorAll(".pkd").forEach(l => l.classList.remove("open"));
 });
 
 // ── SHARE ─────────────────────────────────────────────────────
-function doShare(){
-  var ranked=rankE();
-  var now=new Date();
-  var medals=["\ud83e\udd47","\ud83e\udd48","\ud83e\udd49"];
-  var hl=LIVE.length>0;
-  var lines=[];
-  lines.push("\u26f3 "+SET.tournamentName.toUpperCase());
-  lines.push(SET.venue);
-  lines.push("Updated: "+now.toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"})+" \u00b7 "+now.toLocaleDateString([],{weekday:"short",day:"numeric",month:"short"}));
-  lines.push("");
-  lines.push("\ud83c\udfc6 SWEEP STANDINGS");
-  lines.push("------------------------");
-  ranked.forEach(function(item,rank){
-    var e=item.e,r=item.r,pos=rank+1;
-    var prefix=pos<=3?medals[pos-1]:pos+".";
-    var scorePart=hl&&r&&r.total<9000?" ("+r.total+")":"";
-    lines.push(prefix+" "+e.name+scorePart);
-    [e.g1,e.g2,e.g3].forEach(function(name){
-      var d=findG(name);
-      var ps=d?(d.cut?"CUT":d.wd?"WD":d.pos||"-"):hl?"not found":"-";
-      lines.push("   "+name+" \u2192 "+ps);
+window.doShare = function() {
+  const ranked = rankE();
+  const now = new Date();
+  const medals = ["\ud83e\udd47","\ud83e\udd48","\ud83e\udd49"];
+  const hl = LIVE.length > 0;
+  const lines = [
+    `\u26f3 ${SET.tournamentName.toUpperCase()}`,
+    SET.venue,
+    `Updated: ${now.toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"})} \u00b7 ${now.toLocaleDateString([],{weekday:"short",day:"numeric",month:"short"})}`,
+    "","\ud83c\udfc6 SWEEP STANDINGS","------------------------"
+  ];
+  ranked.forEach((item, rank) => {
+    const e = item.e, r = item.r, pos = rank+1;
+    const prefix = pos<=3 ? medals[pos-1] : `${pos}.`;
+    const scorePart = hl && r && r.total < 9000 ? ` (${r.total})` : "";
+    lines.push(`${prefix} ${e.name}${scorePart}`);
+    [e.g1,e.g2,e.g3].forEach(name => {
+      const d = findG(name);
+      const ps = d ? (d.cut?"CUT":d.wd?"WD":d.pos||"-") : (hl?"not found":"-");
+      lines.push(`   ${name} \u2192 ${ps}`);
     });
     lines.push("");
   });
-  if(hl&&LIVE.length){
-    lines.push("\ud83d\udcca TOURNAMENT TOP 5");
-    lines.push("------------------------");
-    LIVE.slice(0,5).forEach(function(p){
-      lines.push(p.pos+" "+p.name+" "+p.score+(p.thru?" (thru "+p.thru+")":""));
-    });
+  if (hl && LIVE.length) {
+    lines.push("\ud83d\udcca TOURNAMENT TOP 5","------------------------");
+    LIVE.slice(0,5).forEach(p => lines.push(`${p.pos} ${p.name} ${p.score}${p.thru?` (thru ${p.thru})`:""}`));
     lines.push("");
   }
-  lines.push("\ud83d\udd17 "+window.location.href);
-  document.getElementById("stxt").value=lines.join("\n");
+  lines.push(`\ud83d\udd17 ${window.location.href}`);
+  document.getElementById("stxt").value = lines.join("\n");
   document.getElementById("smod").classList.add("open");
-}
-function cpyShr(){
-  var ta=document.getElementById("stxt");ta.select();ta.setSelectionRange(0,99999);
-  try{navigator.clipboard.writeText(ta.value).then(function(){toast("Copied! Paste into WhatsApp");});}
-  catch(e){try{document.execCommand("copy");toast("Copied!");}catch(e2){toast("Select all and copy manually");}}
-}
+};
 
-// ── EXPORT / IMPORT ───────────────────────────────────────────
-function expD(){
-  document.getElementById("xtxt").value=JSON.stringify({entrants:ENT,settings:SET},null,2);
-  document.getElementById("xmod").classList.add("open");
-}
-function cpyExp(){
-  var ta=document.getElementById("xtxt");ta.select();ta.setSelectionRange(0,99999);
-  try{navigator.clipboard.writeText(ta.value).then(function(){toast("Copied!");});}
-  catch(e){try{document.execCommand("copy");toast("Copied!");}catch(e2){toast("Select all and copy manually");}}
-}
-function impD(ev){
-  var file=ev.target.files[0];if(!file)return;
-  var r=new FileReader();
-  r.onload=function(e){
-    try{
-      var d=JSON.parse(e.target.result);
-      if(d.entrants)ENT=d.entrants;
-      if(d.settings)SET=Object.assign({},SET,d.settings);
-      save();applyS();renderAll();toast("Imported!");
-    }catch(x){toast("Import failed");}
-  };
-  r.readAsText(file);ev.target.value="";
-}
-function clrAll(){if(!confirm("Clear ALL entries?"))return;ENT=[];localStorage.removeItem("pgs_e");renderAll();toast("Cleared");}
+window.cpyShr = function() {
+  const ta = document.getElementById("stxt"); ta.select(); ta.setSelectionRange(0,99999);
+  try { navigator.clipboard.writeText(ta.value).then(() => toast("Copied! Paste into WhatsApp")); }
+  catch(e) { try { document.execCommand("copy"); toast("Copied!"); } catch(e2) { toast("Select all and copy manually"); } }
+};
 
 // ── DEBUG ─────────────────────────────────────────────────────
-async function showDebug(){
-  var el=document.getElementById("dbgtxt");
-  el.value="Fetching...";
+window.showDebug = async function() {
+  const el = document.getElementById("dbgtxt");
+  el.value = "Fetching...";
   document.getElementById("dbgmod").classList.add("open");
-  var id=SET.espnEventId||"401811947";
-  var urls=[
-    "https://site.web.api.espn.com/apis/site/v2/sports/golf/pga/scoreboard?event="+id+"&lang=en&region=gb",
-    "https://site.api.espn.com/apis/site/v2/sports/golf/pga/scoreboard?event="+id
-  ];
-  var out="";
-  for(var i=0;i<urls.length;i++){
-    out+="=== URL "+i+" ===\n"+urls[i]+"\n";
-    try{
-      var r=await fetch(urls[i]);
-      out+="Status: "+r.status+"\n";
-      if(!r.ok){out+="FAILED\n\n";continue;}
-      var d=await r.json();
-      var events=d.events||[];
-      out+="Events: "+events.length+"\n";
-      if(!events.length){out+=JSON.stringify(d).slice(0,300)+"\n\n";continue;}
-      var ev=events[0];
-      out+="Event name: "+ev.name+"\n";
-      var co=ev.competitions&&ev.competitions[0];
-      if(!co){out+="No competition\n\n";continue;}
-      out+="Competitors: "+(co.competitors||[]).length+"\n";
-      out+="comp.status: "+JSON.stringify(co.status)+"\n\n";
-      var comps=co.competitors||[];
-      var toShow=comps.slice(0,2).concat(comps.filter(function(c){
-        return (c.athlete&&c.athlete.displayName&&c.athlete.displayName.indexOf("Woodland")>=0);
-      }));
-      toShow.forEach(function(c,ci){
-        out+="--- Player "+ci+" ---\n";
-        out+="name: "+((c.athlete&&c.athlete.displayName)||"?")+"\n";
-        out+="score: "+c.score+"\n";
-        var ls=c.linescores||[];
-        out+="linescores: "+JSON.stringify(ls.map(function(l){return {value:l.value,displayValue:l.displayValue,period:l.period,linescores:l.linescores};}))+"\n\n";
-      });
-      if(events.length)break;
-    }catch(e){out+="ERROR: "+e+"\n\n";}
-  }
-  el.value=out;
-}
-function cpyDbg(){
-  var ta=document.getElementById("dbgtxt");ta.select();ta.setSelectionRange(0,99999);
-  try{navigator.clipboard.writeText(ta.value).then(function(){toast("Copied!");});}
-  catch(e){try{document.execCommand("copy");toast("Copied!");}catch(e2){}}
-}
+  const id = SET.espnEventId || "401811949";
+  const url = `https://site.web.api.espn.com/apis/site/v2/sports/golf/pga/scoreboard?event=${id}&lang=en&region=gb`;
+  let out = `URL: ${url}\n`;
+  try {
+    const r = await fetch(url);
+    out += `Status: ${r.status}\n`;
+    const d = await r.json();
+    const ev = (d.events||[])[0];
+    out += `Event: ${ev ? ev.name : "none"}\n`;
+    const co = ev && ev.competitions && ev.competitions[0];
+    out += `comp.status: ${JSON.stringify(co && co.status)}\n\n`;
+    (co && co.competitors || []).slice(0,3).forEach((c,i) => {
+      out += `--- Player ${i} ---\n`;
+      out += `name: ${c.athlete && c.athlete.displayName}\n`;
+      out += `score: ${c.score}\n`;
+      out += `linescores: ${JSON.stringify((c.linescores||[]).map(l => ({value:l.value,displayValue:l.displayValue,holes:(l.linescores||[]).length})))}\n\n`;
+    });
+  } catch(e) { out += `ERROR: ${e}\n`; }
+  el.value = out;
+};
+
+window.cpyDbg = function() {
+  const ta = document.getElementById("dbgtxt"); ta.select(); ta.setSelectionRange(0,99999);
+  try { navigator.clipboard.writeText(ta.value).then(() => toast("Copied!")); }
+  catch(e) { try { document.execCommand("copy"); } catch(e2) {} }
+};
 
 // ── TOAST ─────────────────────────────────────────────────────
-function toast(msg){var el=document.getElementById("tst");el.textContent=msg;el.classList.add("show");setTimeout(function(){el.classList.remove("show");},3000);}
+window.toast = function(msg) {
+  const el = document.getElementById("tst");
+  el.textContent = msg; el.classList.add("show");
+  setTimeout(() => el.classList.remove("show"), 3000);
+};
 
 // ── INIT ──────────────────────────────────────────────────────
-load();renderAll();doRefresh(false);
-setInterval(function(){var h=new Date().getHours();if(h>=8&&h<=22)doRefresh(false);},3*60*1000);
+applyS();
+renderAll();
+doRefresh(false);
+setInterval(() => { const h = new Date().getHours(); if (h>=8&&h<=22) doRefresh(false); }, 3*60*1000);
+
 </script>
 </body>
 </html>
