@@ -488,7 +488,7 @@ function applyS() {
   document.getElementById("gt").textContent = SET.tournamentName;
 }
 
-function saveS() {
+window.saveS = function saveS() {
   SET.tournamentName = document.getElementById("sn").value.trim();
   SET.venue = document.getElementById("sv").value.trim();
   SET.espnEventId = document.getElementById("se").value.trim();
