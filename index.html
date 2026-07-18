@@ -618,17 +618,21 @@ function parseESPN(d) {
       for (let ri = 0; ri < ls.length; ri++) {
         const lv = ls[ri].value || 0;
         const ldv = ls[ri].displayValue || "";
-        const holesPlayed = (ls[ri].linescores && ls[ri].linescores.length) || 0;
+        // Support both old API (nested linescores array) and new API (holes field directly)
+        const holesPlayed = ls[ri].holes || (ls[ri].linescores && ls[ri].linescores.length) || 0;
         if (holesPlayed >= 18) {
+          // Completed round
           if (ri===0){s1=lv;r1=ldv||String(lv);}
           else if(ri===1){s2=lv;r2=ldv||String(lv);}
           else if(ri===2){s3=lv;r3=ldv||String(lv);}
           else if(ri===3){s4=lv;r4=ldv||String(lv);}
           lastDone = ri;
         } else if (holesPlayed > 0) {
+          // In progress
           inProg = ri;
           if(ri===0)r1=ldv;else if(ri===1)r2=ldv;else if(ri===2)r3=ldv;else if(ri===3)r4=ldv;
         } else if (lv > 18 && holesPlayed === 0) {
+          // Fallback: no holes field but value looks like stroke total
           if(ri===0){s1=lv;r1=ldv||String(lv);}
           else if(ri===1){s2=lv;r2=ldv||String(lv);}
           else if(ri===2){s3=lv;r3=ldv||String(lv);}
@@ -640,7 +644,8 @@ function parseESPN(d) {
         }
       }
       if (inProg >= 0) {
-        thru = String((ls[inProg].linescores && ls[inProg].linescores.length) || 0);
+        // Use holes field directly for thru count
+        thru = String(ls[inProg].holes || (ls[inProg].linescores && ls[inProg].linescores.length) || 0);
       } else if (lastDone >= 0) {
         const nxt = ls[lastDone + 1];
         thru = (nxt && (nxt.value === 0 || !nxt.value)) ? "0" : "F";
@@ -1005,7 +1010,7 @@ window.showDebug = async function() {
       out += `--- Player ${i} ---\n`;
       out += `name: ${c.athlete && c.athlete.displayName}\n`;
       out += `score: ${c.score}\n`;
-      out += `linescores: ${JSON.stringify((c.linescores||[]).map(l => ({value:l.value,displayValue:l.displayValue,holes:(l.linescores||[]).length})))}\n\n`;
+      const ls2=c.linescores||[]; out += `linescores: ${JSON.stringify(ls2.map(l => ({value:l.value,displayValue:l.displayValue,holes:l.holes||(l.linescores&&l.linescores.length)||0})))}\n\n`;
     });
   } catch(e) { out += `ERROR: ${e}\n`; }
   el.value = out;
