@@ -997,8 +997,19 @@ window.showDebug = async function() {
   document.getElementById("dbgmod").classList.add("open");
   const id = SET.espnEventId || "401811949";
   const url = `https://site.web.api.espn.com/apis/site/v2/sports/golf/pga/scoreboard?event=${id}&lang=en&region=gb`;
+  const url2 = `https://site.web.api.espn.com/apis/site/v2/sports/golf/leaderboard?event=${id}&lang=en`;
   let out = `URL: ${url}\n`;
   try {
+    // Also try leaderboard endpoint for cut data
+    try {
+      const r2 = await fetch(url2);
+      const d2 = await r2.json();
+      const ev2 = (d2.events||[])[0];
+      const co2 = ev2 && ev2.competitions && ev2.competitions[0];
+      out += `LEADERBOARD endpoint keys: ${JSON.stringify(co2 ? Object.keys(co2) : [])}\n`;
+      out += `cutLines: ${JSON.stringify(co2 && co2.cutLines)}\n`;
+      out += `cuts: ${JSON.stringify(co2 && co2.cuts)}\n\n`;
+    } catch(e2) { out += `leaderboard endpoint failed: ${e2}\n\n`; }
     const r = await fetch(url);
     out += `Status: ${r.status}\n`;
     const d = await r.json();
@@ -1006,9 +1017,9 @@ window.showDebug = async function() {
     out += `Event: ${ev ? ev.name : "none"}\n`;
     const co = ev && ev.competitions && ev.competitions[0];
     out += `comp.status: ${JSON.stringify(co && co.status)}\n`;
-    out += `comp.cutLines: ${JSON.stringify(co && co.cutLines)}\n`;
-    out += `comp.cuts: ${JSON.stringify(co && co.cuts)}\n`;
-    out += `comp.situation: ${JSON.stringify(co && co.situation)}\n\n`;
+    // Try to find cut line from competition object
+    const compKeys = co ? Object.keys(co) : [];
+    out += `comp keys: ${JSON.stringify(compKeys)}\n\n`;
     const allComps = co && co.competitors || [];
     const toShow = allComps.slice(0,2).concat(allComps.filter(c => 
       (c.athlete && c.athlete.displayName && 
