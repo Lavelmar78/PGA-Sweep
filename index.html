@@ -1015,7 +1015,13 @@ window.showDebug = async function() {
       out += `--- Player ${i} ---\n`;
       out += `name: ${c.athlete && c.athlete.displayName}\n`;
       out += `score: ${c.score}\n`;
-      const ls2=c.linescores||[]; out += `linescores: ${JSON.stringify(ls2.map(l => ({value:l.value,displayValue:l.displayValue,holes:l.holes||(l.linescores&&l.linescores.length)||0})))}\n\n`;
+      out += `status: ${JSON.stringify(c.status)}\n`;
+      out += `active: ${c.active}\n`;
+      out += `didNotFinish: ${c.didNotFinish}\n`;
+      out += `eligible: ${c.eligible}\n`;
+      out += `cutLine: ${JSON.stringify(c.cutLine)}\n`;
+      const ls2=c.linescores||[]; 
+      out += `linescores: ${JSON.stringify(ls2.map(l => ({value:l.value,displayValue:l.displayValue,holes:l.holes||(l.linescores&&l.linescores.length)||0})))}\n\n`;
     });
   } catch(e) { out += `ERROR: ${e}\n`; }
   el.value = out;
