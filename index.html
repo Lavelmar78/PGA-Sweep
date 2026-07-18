@@ -1005,7 +1005,10 @@ window.showDebug = async function() {
     const ev = (d.events||[])[0];
     out += `Event: ${ev ? ev.name : "none"}\n`;
     const co = ev && ev.competitions && ev.competitions[0];
-    out += `comp.status: ${JSON.stringify(co && co.status)}\n\n`;
+    out += `comp.status: ${JSON.stringify(co && co.status)}\n`;
+    out += `comp.cutLines: ${JSON.stringify(co && co.cutLines)}\n`;
+    out += `comp.cuts: ${JSON.stringify(co && co.cuts)}\n`;
+    out += `comp.situation: ${JSON.stringify(co && co.situation)}\n\n`;
     const allComps = co && co.competitors || [];
     const toShow = allComps.slice(0,2).concat(allComps.filter(c => 
       (c.athlete && c.athlete.displayName && 
