@@ -260,6 +260,11 @@ input:focus,select:focus,textarea:focus{border-color:#2d8a47}
           <div class="fhint">Update once ESPN leaderboard is live Thursday.</div>
         </div>
         <div class="frow">
+          <label>Cut Line (score to par)</label>
+          <input type="number" id="sc" placeholder="e.g. 1 for +1" min="-20" max="20">
+          <div class="fhint">Enter after cut is made. Players above this score are marked CUT.</div>
+        </div>
+        <div class="frow">
           <label>Admin Password</label>
           <input type="password" id="spw" placeholder="Set new password">
         </div>
@@ -432,7 +437,8 @@ const ADMIN_HASH = "cecb0ca118cf2fb096cb3f19177c69668ee2b8502e567cf0cec4e2744fec
 let SET = {
   tournamentName: "The Open Championship 2026",
   venue: "Royal Birkdale \u00b7 July 17\u201320",
-  espnEventId: "401811949"
+  espnEventId: "401811949",
+  cutLine: null
 };
 let adminUnlocked = false;
 let PKI = {};
@@ -492,6 +498,8 @@ window.saveS = function saveS() {
   SET.tournamentName = document.getElementById("sn").value.trim();
   SET.venue = document.getElementById("sv").value.trim();
   SET.espnEventId = document.getElementById("se").value.trim();
+  const cl = document.getElementById("sc").value;
+  SET.cutLine = cl !== "" ? parseInt(cl) : null;
   const newpw = document.getElementById("spw").value.trim();
   document.getElementById("spw").value = "";
   if (newpw) {
@@ -618,7 +626,22 @@ function parseESPN(d) {
       // Key observation: cut players have exactly 2 linescore entries (no R3/R4 placeholder).
       // Active players always have a placeholder entry for the current/next round.
       // So: ls.length < currentPeriod means cut (e.g. period 3: active=3 entries, cut=2 entries)
-      const cut = !wd && ls.length < currentPeriod;
+      // Cut detection: use manual cut line from settings when available (most reliable)
+      // Fall back to ls.length check for pre-cut or when cut line not set
+      let cut = false;
+      if (!wd) {
+        if (SET.cutLine !== null && SET.cutLine !== undefined && currentPeriod >= 3) {
+          // Player missed cut if: they have no R3 activity (holes===0) AND 
+          // their 2-round score exceeds the cut line
+          const r3entry = ls[2];
+          const r3inactive = !r3entry || (r3entry.holes || 0) === 0;
+          const twoRoundScore = (ls[0] && ls[0].displayValue ? parseScore(ls[0].displayValue) : 0) +
+                                (ls[1] && ls[1].displayValue ? parseScore(ls[1].displayValue) : 0);
+          cut = r3inactive && twoRoundScore > SET.cutLine;
+        } else {
+          cut = ls.length < currentPeriod;
+        }
+      }
 
       let r1="",r2="",r3="",r4="",thru="",lastDone=-1,inProg=-1,s1=0,s2=0,s3=0,s4=0;
       for (let ri = 0; ri < ls.length; ri++) {
@@ -677,20 +700,47 @@ function parseESPN(d) {
       return (a.rawScoreNum||a.scoreNum) - (b.rawScoreNum||b.scoreNum);
     });
 
-    // Assign real finishing positions to everyone including CUT/WD
-    let rank = 1;
-    for (let i = 0; i < f.length; i++) {
-      const scoreA = f[i].rawScoreNum !== undefined ? f[i].rawScoreNum : f[i].scoreNum;
-      const scoreB = i > 0 ? (f[i-1].rawScoreNum !== undefined ? f[i-1].rawScoreNum : f[i-1].scoreNum) : null;
-      if (i > 0 && scoreA === scoreB && !(f[i].wd && !f[i-1].wd) && !(f[i].cut && !f[i-1].cut)) {
-        f[i].pos = "T" + rank;
-        if (f[i-1].pos === String(rank)) f[i-1].pos = "T" + rank;
+    // Assign positions: active players get real rank, cut/WD get high posNum
+    let rank = 1, cutRank = 1, wdRank = 1;
+    const active = f.filter(p => !p.cut && !p.wd);
+    const cuts   = f.filter(p => p.cut);
+    const wds    = f.filter(p => p.wd);
+
+    // Active players — real leaderboard positions
+    active.forEach((p, i) => {
+      const prev = active[i-1];
+      if (i > 0 && p.rawScoreNum === prev.rawScoreNum) {
+        p.pos = "T" + rank;
+        if (prev.pos === String(rank)) prev.pos = "T" + rank;
       } else {
         rank = i + 1;
-        f[i].pos = String(rank);
+        p.pos = String(rank);
       }
-      f[i].posNum = rank;
-    }
+      p.posNum = rank;
+    });
+
+    // CUT players — positions continue from where active ended
+    const cutStart = active.length + 1;
+    cuts.forEach((p, i) => {
+      const prev = cuts[i-1];
+      if (i > 0 && p.rawScoreNum === prev.rawScoreNum) {
+        p.pos = "T" + (cutStart + i - 1);
+        if (prev.pos === String(cutStart + i - 1)) prev.pos = "T" + (cutStart + i - 1);
+      } else {
+        p.pos = String(cutStart + i);
+      }
+      p.posNum = cutStart + i;
+    });
+
+    // WD players at the bottom
+    const wdStart = cutStart + cuts.length;
+    wds.forEach((p, i) => { p.pos = "WD"; p.posNum = wdStart + i; });
+
+    // Rebuild f in correct order for rendering
+    f.length = 0;
+    active.forEach(p => f.push(p));
+    cuts.forEach(p => f.push(p));
+    wds.forEach(p => f.push(p));
   } catch(e) { console.warn("ESPN parse error:", e); }
   return f;
 }
@@ -1029,26 +1079,27 @@ window.showDebug = async function() {
     const ev = (d.events||[])[0];
     out += `Event: ${ev ? ev.name : "none"}\n`;
     const co = ev && ev.competitions && ev.competitions[0];
-    out += `comp.status: ${JSON.stringify(co && co.status)}\n`;
-    // Try to find cut line from competition object
-    const compKeys = co ? Object.keys(co) : [];
-    out += `comp keys: ${JSON.stringify(compKeys)}\n\n`;
+    const currentPeriod2 = (co && co.status && co.status.period) || 1;
+    out += `comp.status period: ${currentPeriod2}\n\n`;
     const allComps = co && co.competitors || [];
     const toShow = allComps.slice(0,2).concat(allComps.filter(c => 
       (c.athlete && c.athlete.displayName && 
        (c.athlete.displayName.includes("Fitzpatrick") || c.athlete.displayName.includes("Fleetwood")))
     ));
-    toShow.forEach((c,i) => {
-      out += `--- Player ${i} ---\n`;
-      out += `name: ${c.athlete && c.athlete.displayName}\n`;
-      out += `score: ${c.score}\n`;
-      out += `status: ${JSON.stringify(c.status)}\n`;
-      out += `active: ${c.active}\n`;
-      out += `didNotFinish: ${c.didNotFinish}\n`;
-      out += `eligible: ${c.eligible}\n`;
-      out += `cutLine: ${JSON.stringify(c.cutLine)}\n`;
-      const ls2=c.linescores||[]; 
-      out += `linescores: ${JSON.stringify(ls2.map(l => ({value:l.value,displayValue:l.displayValue,holes:l.holes||(l.linescores&&l.linescores.length)||0})))}\n\n`;
+    // Show top 2 + known players
+    const names = ["Fitzpatrick","Fleetwood","Herbert","Fox"];
+    const special = allComps.filter(c => names.some(n => (c.athlete&&c.athlete.displayName||"").includes(n)));
+    allComps.slice(0,2).concat(special).forEach((c,i) => {
+      const nm2 = c.athlete && c.athlete.displayName || "?";
+      const sc2 = (c.score||"").trim()==="0"?"E":(c.score||"").trim();
+      const ls2 = c.linescores||[];
+      const isCut = ls2.length < currentPeriod2;
+      const completed = ls2.filter(l=>(l.holes||0)>=18).length;
+      const inProg2 = ls2.find(l=>{const h=l.holes||0;return h>0&&h<18;});
+      out += `--- ${nm2} ---\n`;
+      out += `score: ${sc2} | ls.length: ${ls2.length} | period: ${currentPeriod2} | cut: ${isCut}\n`;
+      out += `completed rounds: ${completed} | in-progress: ${inProg2?(inProg2.holes||0)+"holes":"none"}\n`;
+      out += `linescores: ${JSON.stringify(ls2.map(l=>({v:l.value,dv:l.displayValue,h:l.holes||0})))}\n\n`;
     });
   } catch(e) { out += `ERROR: ${e}\n`; }
   el.value = out;
