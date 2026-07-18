@@ -1006,7 +1006,12 @@ window.showDebug = async function() {
     out += `Event: ${ev ? ev.name : "none"}\n`;
     const co = ev && ev.competitions && ev.competitions[0];
     out += `comp.status: ${JSON.stringify(co && co.status)}\n\n`;
-    (co && co.competitors || []).slice(0,3).forEach((c,i) => {
+    const allComps = co && co.competitors || [];
+    const toShow = allComps.slice(0,2).concat(allComps.filter(c => 
+      (c.athlete && c.athlete.displayName && 
+       (c.athlete.displayName.includes("Fitzpatrick") || c.athlete.displayName.includes("Fleetwood")))
+    ));
+    toShow.forEach((c,i) => {
       out += `--- Player ${i} ---\n`;
       out += `name: ${c.athlete && c.athlete.displayName}\n`;
       out += `score: ${c.score}\n`;
