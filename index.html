@@ -612,6 +612,12 @@ function parseESPN(d) {
       const score = (c.score || "").trim() === "0" ? "E" : (c.score || "").trim();
       const ls = c.linescores || [];
       const wd = score === "WD" || score === "DQ";
+      const completedRounds = ls.filter(l => (l.holes || 0) >= 18).length;
+      const inProgressRound = ls.find(l => { const h = l.holes || 0; return h > 0 && h < 18; });
+      // Cut detection: ESPN does NOT flag cut players explicitly in this API.
+      // Key observation: cut players have exactly 2 linescore entries (no R3/R4 placeholder).
+      // Active players always have a placeholder entry for the current/next round.
+      // So: ls.length < currentPeriod means cut (e.g. period 3: active=3 entries, cut=2 entries)
       const cut = !wd && ls.length < currentPeriod;
 
       let r1="",r2="",r3="",r4="",thru="",lastDone=-1,inProg=-1,s1=0,s2=0,s3=0,s4=0;
